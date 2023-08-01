@@ -9,13 +9,13 @@ assert not repo.bare
 # list of all files in repo
 files = {}
 
+# how many latest commits to display
 LIMIT = 1000
 
 # iterate over commits in repo
 for commit in repo.iter_commits(reverse=True):
     if LIMIT <= 0:
         break
-
     LIMIT -= 1
 
     if len(commit.parents):
@@ -24,15 +24,24 @@ for commit in repo.iter_commits(reverse=True):
             diff = parent_commit.diff(commit)
 
             # iterate over files that were changed in current commit
-            temp = None
+            # compared to particular parent commit
+            changed_file = None
             for file_diff in diff:
-                temp = File(file_diff.a_path)
-                temp.add_editor(commit.author.email)
+                changed_file = File(file_diff.a_path)
+                changed_file.add_editor(commit.author.email)
 
-                if temp.name in files:
-                    files[temp.name] += 1
-                else:
-                    files[temp.name] = 1
+            if changed_file is None:
+                continue
 
-for file, cnt in files.items():
-    print(file + ": "  + str(cnt))
+            if changed_file.name in files:
+                files[changed_file.name] += changed_file.editors
+            else:
+                files[changed_file.name] = changed_file.editors
+
+
+# print out authors of found files
+for file, authors in files.items():
+    print("==== Authors of file " + file + " are ====")
+
+    for author in authors:
+        print(author)
