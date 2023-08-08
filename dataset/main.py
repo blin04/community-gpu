@@ -1,19 +1,20 @@
 from git import Repo
 from file import File
+from graph import Node, Graph
 
 # loading linux kernel repo
 repo = Repo("/home/ivan/Documents/Petnica/Project2023/kernelRepo/linux")
-# repo = Repo("/home/ivan/Documents/School/Programiranje/Maturski")
 assert not repo.bare
 
 # list of all files in repo
 files = {}
 
-# how many latest commits to display
-LIMIT = 1000
+# how many latest commits to display (used for debugging)
+LIMIT = 10000
 
 # iterate over commits in repo
 for commit in repo.iter_commits(reverse=True):
+
     if LIMIT <= 0:
         break
     LIMIT -= 1
@@ -33,15 +34,38 @@ for commit in repo.iter_commits(reverse=True):
             if changed_file is None:
                 continue
 
+            # add new editors of a file
             if changed_file.name in files:
                 files[changed_file.name] += changed_file.editors
             else:
                 files[changed_file.name] = changed_file.editors
 
 
-# print out authors of found files
-for file, authors in files.items():
-    print("==== Authors of file " + file + " are ====")
+# making list of authors that edited files in linux repo
+authors = []
+for file, file_authors in files.items():
+    for author in file_authors:
+        authors.append(author)
 
-    for author in authors:
-        print(author)
+# making list unique (could fix later)
+authors = list(set(authors))
+
+# creating graph
+graph = Graph([], [])
+
+# creating nodes
+for author in authors:
+    graph.add_node(author)
+
+# creating edges
+for file, file_authors in files.items():
+    for first_author in file_authors:
+        for second_author in file_authors:
+
+            if first_author == second_author:
+                continue
+
+            graph.add_edge(first_author, second_author)
+
+# print out edges
+print("Number of edges: " + str(len(graph.edges)))
