@@ -1,2 +1,4 @@
 dataset/.idea/
 dataset/__pycache__
+dataset/nodes
+dataset/edges

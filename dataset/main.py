@@ -1,6 +1,7 @@
 from git import Repo
 from file import File
 from graph import Node, Graph
+import time
 
 # loading linux kernel repo
 repo = Repo("/home/ivan/Documents/Petnica/Project2023/kernelRepo/linux")
@@ -10,7 +11,8 @@ assert not repo.bare
 files = {}
 
 # how many latest commits to display (used for debugging)
-LIMIT = 10000
+LIMIT = 1000
+start_time = time.time()
 
 # iterate over commits in repo
 for commit in repo.iter_commits(reverse=True):
@@ -67,5 +69,10 @@ for file, file_authors in files.items():
 
             graph.add_edge(first_author, second_author)
 
-# print out edges
+# export graph to a text file
+graph.export()
+
 print("Number of edges: " + str(len(graph.edges)))
+
+end_time = time.time()
+print(end_time - start_time)

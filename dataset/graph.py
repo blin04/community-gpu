@@ -44,8 +44,18 @@ class Graph:
     def export(self):
         """ exports graph into a text file """
 
-        # print data about nodes (label and id)
+        # write data about nodes (label and id)
+        nodes_file = open("nodes", 'w')
 
-        # print data about edges
+        for node in self.nodes:
+            nodes_file.write(str(node.id) + " " + node.label + "\n")
 
-        pass
+        nodes_file.close()
+
+        # write data about edges
+        edges_file = open("edges", 'w')
+
+        for edge in self.edges:
+            edges_file.write(str(edge[0].id) + " " + str(edge[1].id) + "\n")
+
+        edges_file.close()
