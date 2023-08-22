@@ -4,15 +4,17 @@ from graph import Node, Graph
 import time
 
 # loading linux kernel repo
-repo = Repo("/home/ivan/Documents/Petnica/Project2023/kernelRepo/linux")
+repo = Repo("/home/ivan/projects/linux")
 assert not repo.bare
 
 # list of all files in repo
 files = {}
 
 # how many latest commits to display (used for debugging)
-LIMIT = 1000
+LIMIT = 200000
 start_time = time.time()
+
+print("Starting iteration...")
 
 # iterate over commits in repo
 for commit in repo.iter_commits(reverse=True):
@@ -43,22 +45,27 @@ for commit in repo.iter_commits(reverse=True):
                 files[changed_file.name] = changed_file.editors
 
 
+print("Making list of authors...")
 # making list of authors that edited files in linux repo
 authors = []
 for file, file_authors in files.items():
     for author in file_authors:
         authors.append(author)
 
+print("Making the list unique...")
 # making list unique (could fix later)
 authors = list(set(authors))
 
+print("Making graph...")
 # creating graph
 graph = Graph([], [])
 
+print("Creating nodes")
 # creating nodes
 for author in authors:
     graph.add_node(author)
 
+print("Creating edges...")
 # creating edges
 for file, file_authors in files.items():
     for first_author in file_authors:
@@ -72,7 +79,8 @@ for file, file_authors in files.items():
 # export graph to a text file
 graph.export()
 
+print("--- DONE ---")
 print("Number of edges: " + str(len(graph.edges)))
 
 end_time = time.time()
-print(end_time - start_time)
+print("Time: " + str(end_time - start_time))
