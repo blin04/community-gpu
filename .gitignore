@@ -1,2 +1,7 @@
 dataset/.idea/
 dataset/__pycache__
+workers/*
+zklibs/
+
+!workers/client.c
+
