@@ -1,4 +1,4 @@
-apache-zookeeper-3.9.0/
+config/apache-zookeeper-3.9.0/
 dataset/.idea/
 dataset/__pycache__
 workers/*

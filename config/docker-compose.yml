@@ -1,0 +1,35 @@
+version: '3.3'
+services:
+  node1:
+    networks:
+      - net_blin
+    volumes:
+      - ~/Documents/Petnica/Project2023/Code/workers:/project
+      - ~/Documents/Petnica/Project2023/Code/config/zoo1.cfg:/conf/zoo.cfg 
+    image: zklibs3
+    environment:
+      ZOO_MY_ID: 1
+
+
+  node2:
+    networks:
+      - net_blin
+    volumes:
+      - ~/Documents/Petnica/Project2023/Code/workers:/project
+      - ~/Documents/Petnica/Project2023/Code/config/zoo2.cfg:/conf/zoo.cfg 
+    image: zklibs3
+    environment:
+      ZOO_MY_ID: "2"
+
+  node3:
+    networks:
+      - net_blin
+    volumes:
+      - ~/Documents/Petnica/Project2023/Code/workers:/project
+      - ~/Documents/Petnica/Project2023/Code/config/zoo3.cfg:/conf/zoo.cfg 
+    image: zklibs3
+    environment:
+      ZOO_MY_ID: "3"
+
+networks:
+  net_blin:
