@@ -16,24 +16,18 @@ int main()
 
     printf("Connected sucessfully!\n");
 
-    printf("----------- get_children ------------\n");
-    struct String_vector s;
-    int r = zoo_get_children(zkHandler, "/", 0, &s);
+    char buff[256];
+    struct ACL_vector acl = ZOO_OPEN_ACL_UNSAFE;
+    int r = zoo_create(zkHandler, "/my_node", "client", 6,
+        &acl, ZOO_PERSISTENT, buff, sizeof(buff));
 
-    printf("OUTPUT: %s \n", *s.data);
-
-    printf("----------- get ------------\n");
-    char buff[512];
-    int len = sizeof(buff);
-    r = zoo_get(zkHandler, "/test_node", 0, buff, &len, NULL);
-
-    printf("RETURED WITH %d\n", r);
-    printf("DATA: %s\n", buff);
-
-    printf("----------- set ------------\n");
-
-    strcpy(buff, "client");
-    r = zoo_set(zkHandler, "/test_node", buff, len, -1); // proveriti version
+    if (r == ZOK) {
+        printf("CREATED NODE: %s", buff);
+    }
+    else {
+        printf("ERROR: %d", r);
+        return errno;
+    }
 
     zookeeper_close(zkHandler);
 
