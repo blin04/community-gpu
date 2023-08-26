@@ -2,30 +2,26 @@
 #include <errno.h>
 #include <zookeeper/zookeeper.h>
 
-static int connected = 0;
-static int expired = 0;
-
-struct zhandle_t *zkHandler;
-
-void watcher(zhandle_t *zkH, int type, int state, const char *path, void *watcherCtx)
-{
-
-} 
-
 int main()
 {
-    printf("Hey\n");
     zoo_set_debug_level(ZOO_LOG_LEVEL_DEBUG);
 
-    zkHandler = zookeeper_init("localhost:2181", watcher, 1000, 0, 0, 0);
+    zhandle_t *zkHandler = zookeeper_init("localhost:2181", NULL, 1000, 0, 0, 0);
 
-    if (!zkHandler) {
+    if (zkHandler == NULL) {
+        printf("Failed to connect to Zookeeper\n");
         return errno;
     }
-    else {
-        printf("Connection to Zookeeper established\n");
-    }
+
+    printf("Connected sucessfully!\n");
+
+    struct String_vector s;
+    int r = zoo_get_children(zkHandler, "/", 0, &s);
+
+    printf("OUTPUT: %s \n", *s.data);
+
     zookeeper_close(zkHandler);
 
     return 0;
+
 }

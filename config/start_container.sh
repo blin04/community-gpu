@@ -1,3 +1,3 @@
 #! /bin/bash
 
-docker exec -it config_node1_$1 /bin/bash
+docker exec -it config_node$1_1 /bin/bash
