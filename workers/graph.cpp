@@ -27,6 +27,11 @@ Graph::Graph(string nodes_file, string edges_file) {
     while(edges_input >> node1 >> node2) {
         ++num_edges;
 
+        // assignin an id to each edge
+        if (edge_ids.find({node1, node2}) == edge_ids.end()) {
+            edge_ids[{node1, node2}] = num_edges;
+        }
+
         adj_list[node1].push_back(node2);
         adj_list[node2].push_back(node1);
     } 
@@ -46,6 +51,16 @@ void Graph::remove_edge(int node1, int node2) {
     for (auto it = adj_list[node2].begin(); it != adj_list[node2].end(); it++) {
         if (*it == node1) adj_list[node2].erase(it);
     }
+
+    // removing corresponding id
+    if (edge_ids.find({node1, node2}) == edge_ids.end()) edge_ids.erase(edge_ids.find({node2, node1}));
+    else edge_ids.erase(edge_ids.find({node1, node2}));
+}
+
+int Graph::get_edge_id(int node1, int node2) {
+    if (edge_ids.find({node1, node2}) == edge_ids.end()) 
+        return edge_ids[{node2, node1}];
+    else return edge_ids[{node1, node2}];
 }
 
 int Graph::node_degree(int node) {
