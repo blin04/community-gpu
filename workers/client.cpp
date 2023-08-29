@@ -10,20 +10,22 @@
 #include <arpa/inet.h>
 #include <zookeeper/zookeeper.h>
 
+#include "leader.h"
+
 using namespace std;
 
 string HOSTNAME;                          // hostname of current program
 string MY_IP = "";                        // ip address of current program 
 string LEADER_IP = "";                    // ip address of cluster leader
-string CLUSTER = "";                      // name of cluster to which current program is assigned 
+// string CLUSTER = "";                      // name of cluster to which current program is assigned 
 
 // size of eb cluster and nodes assigned to that cluster
-int EB_CNT = 3;
-string EB_NODES[] = {"node2", "node4", "node5"};
+int EB_CNT = 1;
+string EB_NODES[] = {"node2"};
 
 // size of mod cluster and nodes assigned to that cluster
-int MOD_CNT = 2;
-string MOD_NODES[] = {"node3", "node6"};
+int MOD_CNT = 1;
+string MOD_NODES[] = {"node3"};
 
 void setIPAdress() {
     /* funtion for setting clients IP address */
@@ -142,6 +144,14 @@ int main()
         // creating /mod and client znodes (izdvojiti u posebnu funkciju)
         createCluster(zkHandler, "mod");
         cout << "Leader created /mod\n";
+
+        /* ----- main leader algorithm ----- */
+        Leader leader("/graph/nodes", "/graph/edges");
+
+        while(leader.graph.num_edges) {
+            leader.find_central_edge();
+            leader.calculate_modularity();
+        }
     }
     else {
         // this client failed to create /max znode, therfore it is a worker 
