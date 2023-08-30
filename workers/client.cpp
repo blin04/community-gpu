@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <string>
+#include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <errno.h>
@@ -79,10 +80,10 @@ void createCluster(zhandle_t* zh, string cluster_name) {
     /* function that creates znodes for a given cluster */
 
     int i, r;
-    string path, buff;
+    string path, buff, message = "wait";
     if (cluster_name == "eb") {
 
-        r = zoo_create(zh, "/eb", &MY_IP[0], (int)MY_IP.size(), &ZOO_OPEN_ACL_UNSAFE, 
+        r = zoo_create(zh, "/eb", &message[0], (int)message.size(), &ZOO_OPEN_ACL_UNSAFE, 
             ZOO_PERSISTENT, &buff[0], sizeof(buff));
         if (r != ZOK) cout << "ERROR (" << r << "): can't create /eb \n";
 
@@ -95,7 +96,7 @@ void createCluster(zhandle_t* zh, string cluster_name) {
         }
     }
     else if (cluster_name == "mod") {
-        r = zoo_create(zh, "/mod", &MY_IP[0], (int)MY_IP.size(), &ZOO_OPEN_ACL_UNSAFE, 
+        r = zoo_create(zh, "/mod", &message[0], (int)message.size(), &ZOO_OPEN_ACL_UNSAFE, 
             ZOO_PERSISTENT, &buff[0], sizeof(buff));
         if (r != ZOK) cout << "ERROR (" << r << "): can't create /mod \n";
 
@@ -126,7 +127,6 @@ int main()
     setIPAdress();
 
     // creating /max znode
-
     char buff[256];
     int r = zoo_create(zkHandler, "/max", &HOSTNAME[0], (int)HOSTNAME.size(),
         &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, buff, sizeof(buff));
@@ -149,20 +149,21 @@ int main()
         /* ----- main leader algorithm ----- */
         Leader leader("/graph/nodes", "/graph/edges");
 
-        /*while(leader.graph.num_edges) {
-            leader.find_central_edge();
-            leader.calculate_modularity();
-        }*/
+        leader.find_central_edge();
+        leader.calculate_modularity();
     }
     else {
         // this client failed to create /max znode, therfore it is a worker 
 
         // set leader ip
         int len = sizeof(LEADER_IP);
-        char buff[len] = "";
-        r = zoo_get(zkHandler, "/max", 0, buff, &len, NULL);
-        if (r != ZOK) cout << "ERROR (" << r << "): can't get leader ip \n";
-        LEADER_IP = buff;
+        char ip_buff[len] = "";
+        r = zoo_get(zkHandler, "/max", 0, ip_buff, &len, NULL);
+        if (r != ZOK) {
+            cout << "ERROR (" << r << "): can't get leader ip \n";
+            exit(1);
+        }
+        LEADER_IP = ip_buff;
 
         cout << "Leader is: " << LEADER_IP << "\n";
         
@@ -174,7 +175,22 @@ int main()
             r = zoo_set(zkHandler, &path_to_node[0], &MY_IP[0], (int)MY_IP.size(), -1);
 
             /* ----- main edge betweenness algorithm  ----- */
-            EdgeWorker ew("/graph/nodes", "/graph/edges"); 
+            EdgeWorker ew("/graph/test_nodes", "/graph/test_edges"); 
+
+            printf("About to enter the loop\n");
+            char node_msg[20];
+            do {
+                len = sizeof(node_msg);
+                r = zoo_get(zkHandler, "/eb", 0, node_msg, &len, NULL);
+                if (r != ZOK) { 
+                    cout << "ERROR (" << r << "): can't get value from /eb \n";
+                    exit(1);
+                }
+                sleep(1);
+                cout << "Reading " << node_msg << " " << strlen(node_msg) << "\n";
+            } while (strcmp(node_msg, "wait") == 0);
+
+            // implement edge betweenness calc  
 
         }
         else if (checkCluster(zkHandler, "/mod")) {

@@ -12,6 +12,7 @@ void Leader::find_central_edge() {
     * highest value of edge betweenness) in a graph by communicating
     * with the edge betweenness cluster
     */
+    return;
 }
 
 void Leader::calculate_modularity() {
@@ -19,5 +20,6 @@ void Leader::calculate_modularity() {
     * this function gets value of modularity for a graph
     * by communicating with the modularity cluster
     */
+    return;
 }
 
