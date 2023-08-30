@@ -1,13 +1,19 @@
+#ifndef GRAPH_H
+
+#define GRAPH_H
+
 #include <vector>
 #include <map>
 #include <string>
 
 using namespace std;
 
+
 class Graph {
     public:
         int num_nodes;
         int num_edges;
+        int orig_num_edges;
         map<int, string> node_labels;
         map<pair<int, int>, int> edge_ids;
         vector<vector<int>> adj_list;
@@ -20,3 +26,5 @@ class Graph {
         void print_edges();
         void get_communities();
 };
+
+#endif

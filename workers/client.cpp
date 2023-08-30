@@ -11,6 +11,7 @@
 #include <zookeeper/zookeeper.h>
 
 #include "leader.h"
+#include "edge_betweenness.h"
 
 using namespace std;
 
@@ -173,6 +174,7 @@ int main()
             r = zoo_set(zkHandler, &path_to_node[0], &MY_IP[0], (int)MY_IP.size(), -1);
 
             /* ----- main edge betweenness algorithm  ----- */
+            EdgeWorker ew("/graph/nodes", "/graph/edges"); 
 
         }
         else if (checkCluster(zkHandler, "/mod")) {

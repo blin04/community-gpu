@@ -36,26 +36,34 @@ Graph::Graph(string nodes_file, string edges_file) {
         adj_list[node1].push_back(node2);
         adj_list[node2].push_back(node1);
     } 
+
+    orig_num_edges = num_edges;
 }
 
 void Graph::remove_edge(int node1, int node2) {
     /* removes given edge */
 
-    --num_edges;
-
     // removing in node1's adjacency list
     for (auto it = adj_list[node1].begin(); it != adj_list[node1].end(); it++) {
-        if (*it == node2) adj_list[node1].erase(it);
+        if (*it == node2) {
+            adj_list[node1].erase(it);
+            break;
+        }
     }
 
     // removing in node2's adjacency list
     for (auto it = adj_list[node2].begin(); it != adj_list[node2].end(); it++) {
-        if (*it == node1) adj_list[node2].erase(it);
+        if (*it == node1) {
+            adj_list[node2].erase(it);
+            break;
+        }
     }
 
     // removing corresponding id
     if (edge_ids.find({node1, node2}) == edge_ids.end()) edge_ids.erase(edge_ids.find({node2, node1}));
     else edge_ids.erase(edge_ids.find({node1, node2}));
+
+    --num_edges;
 }
 
 int Graph::get_edge_id(int node1, int node2) {
@@ -78,7 +86,6 @@ void Graph::print_nodes() {
     }
 }
 
-// to do...
 void Graph::print_edges() {
     cout << "--- PRINTING EDGES ---\n";
     for (auto it = edge_ids.begin(); it != edge_ids.end(); it++) {
@@ -86,4 +93,5 @@ void Graph::print_edges() {
     }
 }
 
+// to do...
 void Graph::get_communities() {}
