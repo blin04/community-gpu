@@ -4,9 +4,11 @@ dataset/.idea/
 dataset/__pycache__
 dataset/nodes
 dataset/edges
+testing/*
 workers/.vscode
 workers/bin
 zklibs/
 
+!testing/test.py
 !workers/client.c
 
