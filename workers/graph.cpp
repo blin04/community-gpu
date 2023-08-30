@@ -27,8 +27,9 @@ Graph::Graph(string nodes_file, string edges_file) {
     while(edges_input >> node1 >> node2) {
         ++num_edges;
 
-        // assignin an id to each edge
-        if (edge_ids.find({node1, node2}) == edge_ids.end()) {
+        // assigning an id to each edge
+        if (edge_ids.find({node1, node2}) == edge_ids.end()
+                && edge_ids.find({node2, node1}) == edge_ids.end()) {
             edge_ids[{node1, node2}] = num_edges;
         }
 
@@ -78,6 +79,11 @@ void Graph::print_nodes() {
 }
 
 // to do...
-void Graph::print_edges() {}
+void Graph::print_edges() {
+    cout << "--- PRINTING EDGES ---\n";
+    for (auto it = edge_ids.begin(); it != edge_ids.end(); it++) {
+        cout << "(" << it->first.first << " " << it->first.second << ") - " << it->second << "\n";
+    }
+}
 
 void Graph::get_communities() {}

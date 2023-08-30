@@ -148,13 +148,22 @@ int main()
         /* ----- main leader algorithm ----- */
         Leader leader("/graph/nodes", "/graph/edges");
 
-        while(leader.graph.num_edges) {
+        /*while(leader.graph.num_edges) {
             leader.find_central_edge();
             leader.calculate_modularity();
-        }
+        }*/
     }
     else {
         // this client failed to create /max znode, therfore it is a worker 
+
+        // set leader ip
+        int len = sizeof(LEADER_IP);
+        char buff[len] = "";
+        r = zoo_get(zkHandler, "/max", 0, buff, &len, NULL);
+        if (r != ZOK) cout << "ERROR (" << r << "): can't get leader ip \n";
+        LEADER_IP = buff;
+
+        cout << "Leader is: " << LEADER_IP << "\n";
         
         // check to which cluster does this worker belong
         if (checkCluster(zkHandler, "/eb")) {
@@ -162,6 +171,9 @@ int main()
 
             string path_to_node = "/eb/" + HOSTNAME;
             r = zoo_set(zkHandler, &path_to_node[0], &MY_IP[0], (int)MY_IP.size(), -1);
+
+            /* ----- main edge betweenness algorithm  ----- */
+
         }
         else if (checkCluster(zkHandler, "/mod")) {
             cout << HOSTNAME << " is in /mod cluster\n";
@@ -172,14 +184,7 @@ int main()
         else {
             cout << "ERROR: no cluster found!\n";
         }
-
-        int len = (int)LEADER_IP.size();
-        // fix this, not working in C++
-        r = zoo_get(zkHandler, "/max", 0, &LEADER_IP[0], &len, NULL);
-        if (r != ZOK) cout << "ERROR (" << r << "): can't get leader ip \n";
     }
-
-    cout << "Leader is: " << LEADER_IP << "\n";
 
     zookeeper_close(zkHandler);
 
