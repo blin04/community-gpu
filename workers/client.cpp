@@ -19,6 +19,8 @@ using namespace std;
 string HOSTNAME;                          // hostname of current program
 string MY_IP = "";                        // ip address of current program 
 string LEADER_IP = "";                    // ip address of cluster leader
+string NODES_PATH = "/graph/test_nodes";
+string EDGES_PATH = "/graph/test_edges";
 // string CLUSTER = "";                      // name of cluster to which current program is assigned 
 
 // size of eb cluster and nodes assigned to that cluster
@@ -147,10 +149,12 @@ int main()
         cout << "Leader created /mod\n";
 
         /* ----- main leader algorithm ----- */
-        Leader leader("/graph/nodes", "/graph/edges");
+        sleep(60);
+        Leader leader(NODES_PATH, EDGES_PATH);
 
-        leader.find_central_edge();
-        leader.calculate_modularity();
+        leader.start_eb_cluster(zkHandler);
+        leader.start_mod_cluster(zkHandler);
+
     }
     else {
         // this client failed to create /max znode, therfore it is a worker 
@@ -175,9 +179,8 @@ int main()
             r = zoo_set(zkHandler, &path_to_node[0], &MY_IP[0], (int)MY_IP.size(), -1);
 
             /* ----- main edge betweenness algorithm  ----- */
-            EdgeWorker ew("/graph/test_nodes", "/graph/test_edges"); 
+            EdgeWorker ew(NODES_PATH, EDGES_PATH); 
 
-            printf("About to enter the loop\n");
             char node_msg[20];
             do {
                 len = sizeof(node_msg);
@@ -187,10 +190,16 @@ int main()
                     exit(1);
                 }
                 sleep(1);
-                cout << "Reading " << node_msg << " " << strlen(node_msg) << "\n";
             } while (strcmp(node_msg, "wait") == 0);
 
             // implement edge betweenness calc  
+            int most_central_edge;
+            while(ew.graph.num_edges) {
+                most_central_edge = ew.calculate_edge_betweenness(1, ew.graph.num_nodes); 
+                cout << "Removing " << most_central_edge << "...\n";
+                ew.remove_edge(most_central_edge);
+            }
+            cout << "DONE!\n";
 
         }
         else if (checkCluster(zkHandler, "/mod")) {
