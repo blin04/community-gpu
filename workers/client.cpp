@@ -4,7 +4,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include <errno.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -19,8 +18,9 @@ using namespace std;
 string HOSTNAME;                          // hostname of current program
 string MY_IP = "";                        // ip address of current program 
 string LEADER_IP = "";                    // ip address of cluster leader
-string NODES_PATH = "/graph/test_nodes";
-string EDGES_PATH = "/graph/test_edges";
+string NODES_PATH = "/graph/test_nodes";  // path to file containing nodes
+string EDGES_PATH = "/graph/test_edges";  // path to file containing edges
+int PORT = 10000;                           // port to access leader server
 // string CLUSTER = "";                      // name of cluster to which current program is assigned 
 
 // size of eb cluster and nodes assigned to that cluster
@@ -121,7 +121,7 @@ int main()
 
     if (zkHandler == NULL) {
         cout << "Failed to connect to Zookeeper\n";
-        return errno;
+        exit(1);
     }
     cout << "Connected sucessfully!\n";
 
@@ -148,12 +148,62 @@ int main()
         createCluster(zkHandler, "mod");
         cout << "Leader created /mod\n";
 
-        /* ----- main leader algorithm ----- */
-        sleep(60);
-        Leader leader(NODES_PATH, EDGES_PATH);
+        // initiate a server
+        int server_socket = socket(AF_INET, SOCK_STREAM, 0);
+        if (server_socket < 0) {
+            cout << "ERROR: can't open server socket\n";
+            exit(1);
+        }
 
+        sockaddr_in server_address;
+        int server_addrlen = sizeof(server_address);
+
+        bzero((char *) &server_address, server_addrlen);
+        server_address.sin_family = AF_INET;
+        server_address.sin_addr.s_addr = INADDR_ANY;
+        server_address.sin_port = htons(PORT);
+
+        r = bind(server_socket, (sockaddr*)&server_address, server_addrlen);
+        if (r < 0) {
+            cout << "ERROR (" << errno <<"): can't bind socket to port \n";
+            exit(1);
+        }
+
+        r = listen(server_socket, 2);
+        if (r < 0) {
+            cout << "ERROR: listen failed\n";
+            exit(1);
+        }
+
+        // FIX: lider ovde zabode
+        int connection_socket = accept(server_socket, 
+            (sockaddr*)&server_address, (socklen_t*)&server_addrlen);
+        if (connection_socket < 0) {
+            cout << "ERROR: accept failed\n";
+            exit(1); 
+        }
+
+        /* main leader algorithm */
+        Leader leader(NODES_PATH, EDGES_PATH);
+ //       sleep(20);
+        // start clusters
         leader.start_eb_cluster(zkHandler);
         leader.start_mod_cluster(zkHandler);
+
+        int edge_to_delete, iteration = 1;
+        while(leader.graph.num_edges) {
+            cout << "In loop...\n";
+            edge_to_delete = leader.find_central_edge(connection_socket);
+            if (edge_to_delete == -1) break;
+            leader.edges_to_delete.push({edge_to_delete, iteration});
+            leader.calculate_modularity();
+            ++iteration;
+        }
+
+        cout << "Completed!\n";
+
+        close(server_socket);
+        close(connection_socket);
 
     }
     else {
@@ -182,6 +232,7 @@ int main()
             EdgeWorker ew(NODES_PATH, EDGES_PATH); 
 
             char node_msg[20];
+            // wait unit leader gives mark to start
             do {
                 len = sizeof(node_msg);
                 r = zoo_get(zkHandler, "/eb", 0, node_msg, &len, NULL);
@@ -192,14 +243,49 @@ int main()
                 sleep(1);
             } while (strcmp(node_msg, "wait") == 0);
 
+            // setup client for communication with leader 
+            int client_socket = socket(AF_INET, SOCK_STREAM, 0);
+            if (client_socket < 0) {
+                cout << "ERROR: can't create client socket\n";
+                exit(1);
+            }
+
+            sockaddr_in leader_address;
+            leader_address.sin_family = AF_INET;
+            leader_address.sin_port = htons(PORT);
+
+            // convert IPv4 from text to binary form
+            r = inet_pton(AF_INET, &LEADER_IP[0], &leader_address.sin_addr);
+            if (r <= 0) {
+                cout << "ERROR (" << r << "): invalid address\n";
+            } 
+
+            r = connect(client_socket, (sockaddr*) &leader_address, sizeof(leader_address));
+            if (r < 0) {
+                cout << "ERROR (" << errno << "): can't connect to leader server\n";
+                exit(1);
+            }
+
+            cout << "Connection successfull!\n";
+
             // implement edge betweenness calc  
             int most_central_edge;
             while(ew.graph.num_edges) {
                 most_central_edge = ew.calculate_edge_betweenness(1, ew.graph.num_nodes); 
+
+                // send data to leader
+                r = write(client_socket, &most_central_edge, sizeof(int));
+                if (r < 0) {
+                    cout << "ERROR: failed sending message to server\n";
+                    exit(1);
+                }
+
                 cout << "Removing " << most_central_edge << "...\n";
                 ew.remove_edge(most_central_edge);
             }
             cout << "DONE!\n";
+            int tmp = -1;
+            r = write(client_socket, &(tmp), sizeof(int));
 
         }
         else if (checkCluster(zkHandler, "/mod")) {

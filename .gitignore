@@ -4,6 +4,8 @@ dataset/.idea/
 dataset/__pycache__
 dataset/nodes
 dataset/edges
+dataset/test_nodes
+dataset/test_edges
 testing/*
 workers/.vscode
 workers/bin

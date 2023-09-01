@@ -10,7 +10,7 @@ class Leader {
         Leader(string nodes, string edges);
         void start_eb_cluster(zhandle_t* zh);
         void start_mod_cluster(zhandle_t* zh);
-        void find_central_edge();
+        int find_central_edge(int server_socket);
         void calculate_modularity(); 
         void get_best_partition();
 };

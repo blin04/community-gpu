@@ -1,5 +1,6 @@
 #include <iostream>
 #include <zookeeper/zookeeper.h>
+#include <unistd.h>
 #include "leader.h"
 
 // konstruktor
@@ -25,13 +26,24 @@ void Leader::start_mod_cluster(zhandle_t *zh) {
     }
 }
 
-void Leader::find_central_edge() {
+int Leader::find_central_edge(int server_socket) {
     /*
     * this function gets the most central edge (edge with
     * highest value of edge betweenness) in a graph by communicating
     * with the edge betweenness cluster
     */
-    return;
+
+    int edge_id;
+    cout << "Trying to read...\n";
+    int r = read(server_socket, &edge_id, sizeof(int));  
+    cout << "Read successful!\n";
+    if (r < 0) {
+        std::cout << "ERROR: can't read from /eb cluster \n";
+        exit(1);
+    }
+    std::cout << "Found central edge\n";
+
+    return edge_id;
 }
 
 void Leader::calculate_modularity() {
