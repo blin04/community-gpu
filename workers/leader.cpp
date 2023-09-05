@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string.h>
 #include <zookeeper/zookeeper.h>
 #include <unistd.h>
 #include "leader.h"
@@ -9,6 +10,9 @@ Leader::Leader(string nodes, string edges) : graph(nodes, edges) {
 }
 
 void Leader::start_eb_cluster(zhandle_t *zh) {
+    /*
+    * gives /eb cluster mark to start working
+    */
     char start_msg[] = "start";
     int r = zoo_set(zh, "/eb", start_msg, sizeof(start_msg), -1);
     if (r != ZOK) {
@@ -18,12 +22,44 @@ void Leader::start_eb_cluster(zhandle_t *zh) {
 }
 
 void Leader::start_mod_cluster(zhandle_t *zh) {
+    /*
+    * gives /mod cluster mark to start working
+    */
     char start_msg[] = "start";
     int r = zoo_set(zh, "/mod", start_msg, sizeof(start_msg), -1);
     if (r != ZOK) {
         cout << "ERROR (" << r << "): couldn't set /mod to start\n";
         exit(1);
     }
+}
+
+bool Leader::check_if_finished(zhandle_t *zh) {
+    /*
+    * this function checks if /eb and /mod clusters finished  
+    * their calculations
+    */
+
+    char cluster1[20] = "", cluster2[20] = "";
+    int len = sizeof(cluster1);
+
+    int r = zoo_get(zh, "/eb", 0, cluster1, &len, NULL);
+    if (r != ZOK) {
+        cout << "ERROR: can't get info from /eb znode\n";
+        exit(1);
+    }
+
+    r = zoo_get(zh, "/mod", 0, cluster2, &len, NULL);
+    if (r != ZOK) {
+        cout << "ERROR: can't get info from /mod znode\n";
+        exit(1);
+    }
+
+    cout << "ZNode values " << cluster1 << " " << cluster2 << "\n";
+
+    if (strcmp(cluster1, "finished") == 0 && 
+        strcmp(cluster2, "finished") == 0)
+        return true;
+    else return false;
 }
 
 int Leader::find_central_edge(int server_socket) {
@@ -34,15 +70,11 @@ int Leader::find_central_edge(int server_socket) {
     */
 
     int edge_id;
-    cout << "Trying to read...\n";
     int r = read(server_socket, &edge_id, sizeof(int));  
-    cout << "Read successful!\n";
     if (r < 0) {
         std::cout << "ERROR: can't read from /eb cluster \n";
         exit(1);
     }
-    std::cout << "Found central edge\n";
-
     return edge_id;
 }
 

@@ -175,6 +175,12 @@ int main()
             exit(1);
         }
 
+        // start clusters
+        Leader leader(NODES_PATH, EDGES_PATH);
+        leader.start_eb_cluster(zkHandler);
+        leader.start_mod_cluster(zkHandler);
+
+        // await connection
         cout << "Connecting...\n";
         int connection_socket = accept(server_socket, 
             (sockaddr*)&server_address, (socklen_t*)&server_addrlen);
@@ -185,15 +191,9 @@ int main()
         cout << "Connected!\n";
 
         /* main leader algorithm */
-        Leader leader(NODES_PATH, EDGES_PATH);
- //       sleep(20);
-        // start clusters
-        leader.start_eb_cluster(zkHandler);
-        leader.start_mod_cluster(zkHandler);
 
         int edge_to_delete, iteration = 1;
-        while(leader.graph.num_edges) {
-            cout << "In loop...\n";
+        while(!leader.check_if_finished(zkHandler)) {
             edge_to_delete = leader.find_central_edge(connection_socket);
             if (edge_to_delete == -1) break;
             leader.edges_to_delete.push(edge_to_delete);
@@ -242,7 +242,6 @@ int main()
                     cout << "ERROR (" << r << "): can't get value from /eb \n";
                     exit(1);
                 }
-                sleep(1);
             } while (strcmp(node_msg, "wait") == 0);
 
             // setup client for communication with leader 
@@ -286,16 +285,22 @@ int main()
                 ew.graph.remove_edge(most_central_edge);
             }
             cout << "DONE!\n";
-            // signal to leader that calculation is finished
-            int tmp = -1;
-            r = write(client_socket, &(tmp), sizeof(int));
 
+            // mark to leader that algorithm has finished
+
+            string msg = "finished";
+            r = zoo_set(zkHandler, "/eb", &msg[0], (int)msg.size(), -1);
         }
         else if (checkCluster(zkHandler, "/mod")) {
             cout << HOSTNAME << " is in /mod cluster\n";
 
             string path_to_node = "/mod/" + HOSTNAME;
             r = zoo_set(zkHandler, &path_to_node[0], &MY_IP[0], (int)MY_IP.size(), -1);
+
+            // mark to leader that algorithm has finished
+
+            string msg = "finished";
+            r = zoo_set(zkHandler, "/mod", &msg[0], (int)msg.size(), -1);
         }
         else {
             cout << "ERROR: no cluster found!\n";
