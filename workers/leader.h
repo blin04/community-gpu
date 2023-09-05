@@ -3,8 +3,8 @@
 
 class Leader {
     public:
-        queue<pair<int, int>> edges_to_delete;
-        vector<pair<int, pair<int, int>>> removal_order;
+        queue<int> edges_to_delete;
+        vector<pair<int, int>> removal_order;
         Graph graph;
 
         Leader(string nodes, string edges);

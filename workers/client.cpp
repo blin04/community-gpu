@@ -175,13 +175,14 @@ int main()
             exit(1);
         }
 
-        // FIX: lider ovde zabode
+        cout << "Connecting...\n";
         int connection_socket = accept(server_socket, 
             (sockaddr*)&server_address, (socklen_t*)&server_addrlen);
         if (connection_socket < 0) {
             cout << "ERROR: accept failed\n";
             exit(1); 
         }
+        cout << "Connected!\n";
 
         /* main leader algorithm */
         Leader leader(NODES_PATH, EDGES_PATH);
@@ -195,7 +196,8 @@ int main()
             cout << "In loop...\n";
             edge_to_delete = leader.find_central_edge(connection_socket);
             if (edge_to_delete == -1) break;
-            leader.edges_to_delete.push({edge_to_delete, iteration});
+            leader.edges_to_delete.push(edge_to_delete);
+            leader.removal_order.push_back({edge_to_delete, iteration});
             leader.calculate_modularity();
             ++iteration;
         }
@@ -281,9 +283,10 @@ int main()
                 }
 
                 cout << "Removing " << most_central_edge << "...\n";
-                ew.remove_edge(most_central_edge);
+                ew.graph.remove_edge(most_central_edge);
             }
             cout << "DONE!\n";
+            // signal to leader that calculation is finished
             int tmp = -1;
             r = write(client_socket, &(tmp), sizeof(int));
 

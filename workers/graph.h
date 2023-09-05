@@ -20,6 +20,7 @@ class Graph {
 
         Graph (string nodes_file, string edges_file);
         void remove_edge(int node1, int node2);
+        void remove_edge(int edge_id); 
         int get_edge_id(int node1, int node2);
         int node_degree(int node);
         void print_nodes();

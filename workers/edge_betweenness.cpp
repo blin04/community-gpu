@@ -6,20 +6,6 @@ EdgeWorker::EdgeWorker(string nodes, string edges) : graph(nodes, edges) {
     std::cout << "Edge Worker initialized\n";
 }
 
-void EdgeWorker::remove_edge(int edge_id) {
-    pair<int, int> edge = {-1, -1};
-    for (auto it = graph.edge_ids.begin(); it != graph.edge_ids.end(); it++) {
-        if (it->second == edge_id) edge = it->first;
-    }
-
-    if (edge.first == -1) {
-        cout << "ERROR: couldn't remove edge\n";
-        exit(1);
-    }
-
-    graph.remove_edge(edge.first, edge.second);
-}
-
 int EdgeWorker::calculate_edge_betweenness(int start_node, int end_node) {
     /*
     * this function calculates edge betweenness values for all edges in a graph

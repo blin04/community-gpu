@@ -66,6 +66,21 @@ void Graph::remove_edge(int node1, int node2) {
     --num_edges;
 }
 
+void Graph::remove_edge(int edge_id) {
+
+    pair<int, int> edge = {-1, -1};
+    for (auto it = edge_ids.begin(); it != edge_ids.end(); it++) {
+        if (it->second == edge_id) edge = it->first;
+    }
+
+    if (edge.first == -1) {
+        cout << "ERROR: couldn't find edge with given ID\n";
+        exit(1);
+    }
+
+    remove_edge(edge.first, edge.second);
+}
+
 int Graph::get_edge_id(int node1, int node2) {
     if (edge_ids.find({node1, node2}) == edge_ids.end()) 
         return edge_ids[{node2, node1}];
