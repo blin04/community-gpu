@@ -10,6 +10,8 @@ using namespace std;
 
 
 class Graph {
+    private:
+        void dfs(int node, vector<int> &visited, int comm_id);
     public:
         int num_nodes;
         int num_edges;
@@ -25,7 +27,7 @@ class Graph {
         int node_degree(int node);
         void print_nodes();
         void print_edges();
-        void get_communities();
+        void get_communities(vector<int> &communities);
 };
 
 #endif

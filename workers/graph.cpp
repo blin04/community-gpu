@@ -40,6 +40,13 @@ Graph::Graph(string nodes_file, string edges_file) {
     orig_num_edges = num_edges;
 }
 
+void Graph::dfs(int node, vector<int> &communities, int comm_id) {
+    communities[node] = comm_id;
+    for (auto it = adj_list[node].begin(); it != adj_list[node].end(); it++) {
+        if (communities[*it] == -1) dfs(*it, communities, comm_id);
+    }
+}
+
 void Graph::remove_edge(int node1, int node2) {
     /* removes given edge */
 
@@ -109,4 +116,26 @@ void Graph::print_edges() {
 }
 
 // to do...
-void Graph::get_communities() {}
+void Graph::get_communities(vector<int> &communities) {
+    /* 
+    * this function returns components of graph which 
+    * correspond to communities found in that graph
+    */
+
+
+    if ((int)communities.size() != num_nodes + 1) {
+       cout << "ERROR: vector given is not of expected size!\n";
+       exit(1);
+    }
+
+    int comm_id = 1;
+    fill(communities.begin(), communities.end(), -1);
+
+    for (int i = 1; i <= num_nodes; i++) {
+        if (communities[i] == -1) {
+            dfs(i, communities, comm_id);
+            ++comm_id;
+        }
+    }
+
+}
