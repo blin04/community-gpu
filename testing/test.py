@@ -1,5 +1,5 @@
 """
-program used for testing edge betweenness calculation algorithm
+program used for testing performances of dist algorithm
 """
 
 import networkx as nx
@@ -7,7 +7,7 @@ import networkx as nx
 G = nx.Graph()
 
 # read nodes
-f = open("test_nodes", 'r')
+f = open("../dataset/t_n", 'r')
 
 for line in f:
     line = line.split(' ')
@@ -16,7 +16,7 @@ for line in f:
 f.close()
 
 # read edges
-f = open("test_edges", 'r')
+f = open("../dataset/t_e", 'r')
 
 for line in f:
     line = line.split(' ')
@@ -24,8 +24,11 @@ for line in f:
 
 f.close()
 
-# calculate edge betweenness
+comp = nx.connected_components(G)
+mod = nx.community.modularity(G, nx.connected_components(G))
+print("Modularity is: " + str(mod))
 
+# calculate edge betweenness
 while G.number_of_edges() > 0:
     betweenness = nx.edge_betweenness_centrality(G)
     print(" --------- ")
