@@ -12,6 +12,7 @@
 
 #include "leader.h"
 #include "edge_betweenness.h"
+#include "modularity.h"
 
 using namespace std;
 
@@ -94,7 +95,7 @@ void setClustersIP(zhandle_t *zh) {
         }
         mod_state = node_msg;
 
-        cout << "STRINGS: " << eb_state << "|" << mod_state << "\n";
+        //cout << "STRINGS: " << eb_state << "|" << mod_state << "\n";
 
         sleep(1);
     } while (strncmp(&eb_state[0], "wait", 4) != 0 
@@ -256,6 +257,7 @@ int main()
         leader.start_mod_cluster(zkHandler);
 
         int most_central_edge, iteration = 1;
+        double mod;
         cout << "About to begin\n";
         int max_sd = server_socket;
         while(!leader.check_if_finished(zkHandler)) {
@@ -299,9 +301,45 @@ int main()
                 if (eb_socket != 0 && mod_socket != 0) STATE = CONNECTED;
                 continue;
             }
-            cout << "Now algorithm\n";
-            break;
+
+            // actual leader algorithm
+            most_central_edge = leader.find_central_edge(eb_socket);
+            if (most_central_edge == -1) break;
+
+            leader.removal_order.push_back({iteration, most_central_edge});
+            leader.edges_to_delete.push(most_central_edge);
+
+            mod = leader.calculate_modularity(mod_socket);
+            if (mod == -1) break;
+            
+            leader.modularity_values.push_back(mod);
+            ++iteration;
         }
+
+        cout << "FINISHED!!\n";
+
+        // find highest modularity value 
+        int best_it = -1;
+        double best_q = -1.0;
+        for (int i = 0; i < (int)leader.modularity_values.size(); i++) {
+            if(leader.modularity_values[i] > best_q) {
+                best_q = leader.modularity_values[i];
+                best_it = i + 1;
+            }
+        }
+
+        for (int i = 0; i < best_it; i++) {
+            leader.graph.remove_edge(leader.removal_order[i].second);
+        }
+
+        vector<int> communities(leader.graph.num_nodes + 1);
+        leader.graph.get_communities(communities);
+
+        cout << "----- CALCULATED COMMUNITIES -----\n";
+        for (auto c : communities) {
+            cout << c << " ";
+        }
+        cout << "\n";
 
         close(server_socket);
         close(eb_socket);
@@ -382,6 +420,8 @@ int main()
                 ew.graph.remove_edge(most_central_edge);
             }
             cout << "DONE!\n";
+            int tmp = -1;
+            write(client_socket, &tmp, sizeof(int));
 
             // mark to leader that algorithm has finished
             string msg = "finished";
@@ -394,9 +434,44 @@ int main()
             r = zoo_set(zkHandler, &path_to_node[0], &MY_IP[0], (int)MY_IP.size(), -1);
             r = zoo_set(zkHandler, "/mod", "wait", 4, -1);
 
+            /* ----- main modularity algorithm ----- */
+            ModulWorker mw(NODES_PATH, EDGES_PATH);
+    
+            // wait unit leader gives mark to start
+            char node_msg[20];
+            do {
+                len = sizeof(node_msg);
+                r = zoo_get(zkHandler, "/mod", 0, node_msg, &len, NULL);
+                if (r != ZOK) { 
+                    cout << "ERROR (" << r << "): can't get value from /mod \n";
+                    exit(1);
+                }
+            } while (strcmp(node_msg, "wait") == 0);
+
+            // calculate modularity
+            double q;
+            int edge_to_delete;
+            while(mw.graph.num_edges) {
+                r = read(client_socket, &edge_to_delete, sizeof(int));
+                if (r < 0) {
+                    cout << "ERROR (" << errno <<  "): failed reading from leader\n";
+                    exit(1);
+                }
+                mw.graph.remove_edge(edge_to_delete);
+                q = mw.calculate_modularity(1, mw.graph.num_nodes);
+                r = write(client_socket, &q, sizeof(double));
+                if (r < 0) {
+                    cout << "ERROR (" << errno <<  "): failed writing to leader\n";
+                    exit(1);
+                }
+            }
+            cout << "DONE!\n";
+            int tmp = -1;
+            write(client_socket, &tmp, sizeof(int));
+
             // mark to leader that algorithm has finished
-         //   string msg = "finished";
-          //  r = zoo_set(zkHandler, "/mod", &msg[0], (int)msg.size(), -1);
+            string msg = "finished";
+            r = zoo_set(zkHandler, "/mod", &msg[0], (int)msg.size(), -1);
         }
         else {
             cout << "ERROR: no cluster found!\n";

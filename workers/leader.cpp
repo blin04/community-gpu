@@ -54,7 +54,9 @@ bool Leader::check_if_finished(zhandle_t *zh) {
         exit(1);
     }
 
-    if (strcmp(cluster1, "finished") == 0 && 
+   // cout << cluster1 << " " << cluster2 << "\n";
+
+    if (strcmp(cluster1, "finished") == 0 &&
         strcmp(cluster2, "finished") == 0)
         return true;
     else return false;
@@ -76,11 +78,28 @@ int Leader::find_central_edge(int eb_socket) {
     return edge_id;
 }
 
-int Leader::calculate_modularity(int mod_socket) {
+double Leader::calculate_modularity(int mod_socket) {
     /*
     * this function gets value of modularity for a graph
     * by communicating with the modularity cluster
     */
-    return 0;
+
+    int edge_to_delete = edges_to_delete.front();
+    edges_to_delete.pop();
+
+    int r = write(mod_socket, &edge_to_delete, sizeof(int));
+    if (r < 0) {
+        cout << "ERROR (" << errno << "): failed writing to mod cluster\n";
+        exit(1);
+    }
+
+    double q;
+    r = read(mod_socket, &q, sizeof(double));
+    if (r < 0) {
+        cout << "ERROR (" << errno << "): failed reading from mod cluster\n";
+        exit(1);
+    }
+
+    return q;
 }
 
