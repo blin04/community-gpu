@@ -11,7 +11,7 @@ class Leader {
         void start_eb_cluster(zhandle_t* zh);
         void start_mod_cluster(zhandle_t* zh);
         bool check_if_finished(zhandle_t* zh);
-        int find_central_edge(int server_socket);
-        void calculate_modularity(); 
+        int find_central_edge(int eb_socket);
+        int calculate_modularity(int mod_socket); 
         void get_best_partition();
 };

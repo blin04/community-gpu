@@ -17,11 +17,19 @@ using namespace std;
 
 string HOSTNAME;                          // hostname of current program
 string MY_IP = "";                        // ip address of current program 
-string LEADER_IP = "";                    // ip address of cluster leader
+string LEADER_IP = "";                    // ip address of leader
+string EB_CLUSTER_IP = "";                // ip address of eb cluster leader 
+string MOD_CLUSTER_IP = "";               // ip address of mod cluster leader
 string NODES_PATH = "/graph/test_nodes";  // path to file containing nodes
 string EDGES_PATH = "/graph/test_edges";  // path to file containing edges
 int PORT = 10000;                           // port to access leader server
-// string CLUSTER = "";                      // name of cluster to which current program is assigned 
+
+// enum used for tracking in which state algorithm is
+enum algo_state {
+    WAITING,
+    CONNECTED,
+    STARTED
+} STATE;
 
 // size of eb cluster and nodes assigned to that cluster
 int EB_CNT = 1;
@@ -32,7 +40,7 @@ int MOD_CNT = 1;
 string MOD_NODES[] = {"node3"};
 
 void setIPAdress() {
-    /* funtion for setting clients IP address */
+    /* funtion for setting IP address */
 
     struct hostent* host_entry = gethostbyname(&HOSTNAME[0]);
 
@@ -48,7 +56,7 @@ void setIPAdress() {
 }
 
 void setHostName() {
-    /* function for setting clients hostname */
+    /* function for setting hostname */
 
     char buff[100];
     int hostname = gethostname(buff, sizeof(buff));
@@ -59,6 +67,62 @@ void setHostName() {
         cout << "ERROR: failed in setHostName()\n";
         exit(1);
     }
+}
+
+void setClustersIP(zhandle_t *zh) {
+    /* 
+    * function for setting IP addresses of cluster leaders 
+    */
+    // wait unit leader gives mark to start
+    string eb_state = "", mod_state = "";
+    char node_msg[20];
+    int len, r;
+    do {
+        len = sizeof(node_msg);
+        r = zoo_get(zh, "/eb", 0, node_msg, &len, NULL);
+        if (r != ZOK) { 
+            cout << "ERROR (" << r << "): can't get value from /eb \n";
+            exit(1);
+        }
+        eb_state = node_msg;
+
+        node_msg[0] = '\0';
+        r = zoo_get(zh, "/mod", 0, node_msg, &len, NULL);
+        if (r != ZOK) { 
+            cout << "ERROR (" << r << "): can't get value from /eb \n";
+            exit(1);
+        }
+        mod_state = node_msg;
+
+        cout << "STRINGS: " << eb_state << "|" << mod_state << "\n";
+
+        sleep(1);
+    } while (strncmp(&eb_state[0], "wait", 4) != 0 
+        || strncmp(&mod_state[0], "wait", 4) != 0);
+
+    len = 20;
+    char ip_buff[len] = "";
+    string eb_path = "/eb/" + EB_NODES[0];
+    r = zoo_get(zh, &eb_path[0], 0, ip_buff, &len, NULL);
+    if (r < 0) {
+        cout << "ERROR: can't get EB cluster IP address\n";
+        exit(1);
+    }
+    EB_CLUSTER_IP = ip_buff;
+
+    string mod_path = "/mod/" + MOD_NODES[0];
+    r = zoo_get(zh, &mod_path[0], 0, ip_buff, &len, NULL);
+    if (r < 0) {
+        cout << "ERROR: can't get MOD cluster IP address\n";
+        exit(1);
+    }
+    MOD_CLUSTER_IP = ip_buff;
+
+    cout << "--- CLUSTERS ---\n";
+    cout << EB_CLUSTER_IP << "\n";
+    cout << MOD_CLUSTER_IP << "\n";
+
+    MOD_CLUSTER_IP = ip_buff;
 }
 
 bool checkCluster(zhandle_t* zh, string path) {
@@ -82,10 +146,10 @@ void createCluster(zhandle_t* zh, string cluster_name) {
     /* function that creates znodes for a given cluster */
 
     int i, r;
-    string path, buff, message = "wait";
+    string path, buff;
     if (cluster_name == "eb") {
 
-        r = zoo_create(zh, "/eb", &message[0], (int)message.size(), &ZOO_OPEN_ACL_UNSAFE, 
+        r = zoo_create(zh, "/eb", "", 0, &ZOO_OPEN_ACL_UNSAFE, 
             ZOO_PERSISTENT, &buff[0], sizeof(buff));
         if (r != ZOK) cout << "ERROR (" << r << "): can't create /eb \n";
 
@@ -98,7 +162,7 @@ void createCluster(zhandle_t* zh, string cluster_name) {
         }
     }
     else if (cluster_name == "mod") {
-        r = zoo_create(zh, "/mod", &message[0], (int)message.size(), &ZOO_OPEN_ACL_UNSAFE, 
+        r = zoo_create(zh, "/mod", "", 1, &ZOO_OPEN_ACL_UNSAFE, 
             ZOO_PERSISTENT, &buff[0], sizeof(buff));
         if (r != ZOK) cout << "ERROR (" << r << "): can't create /mod \n";
 
@@ -134,17 +198,21 @@ int main()
         &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, buff, sizeof(buff));
 
     if (r == ZOK) {
-        // since this client managed to create /max znode, it gets to be the leader 
+        // this client managed to create /max znode, so it becomes the leader 
 
         cout << "CREATED NODE (" << buff << "): leader initialized\n";
         r = zoo_set(zkHandler, "/max", &MY_IP[0], (int)MY_IP.size(), -1);
         LEADER_IP = MY_IP;
 
-        // creating /eb and client znodes (izdvojiti u posebnu funkciju)
+        // creating /eb and client znodes 
         createCluster(zkHandler, "eb");
         cout << "Leader created /eb\n";
 
-        // creating /mod and client znodes (izdvojiti u posebnu funkciju)
+
+        // algorithm is in waiting state
+        STATE = WAITING;
+
+        // creating /mod and client znodes
         createCluster(zkHandler, "mod");
         cout << "Leader created /mod\n";
 
@@ -175,38 +243,69 @@ int main()
             exit(1);
         }
 
-        // start clusters
+        // variables used for monitoring two socket descriptors
+        fd_set readfds;
+        int eb_socket = 0, mod_socket = 0, new_socket, activity;
+
+        /* main leader algorithm */
         Leader leader(NODES_PATH, EDGES_PATH);
+
+        setClustersIP(zkHandler);
+
         leader.start_eb_cluster(zkHandler);
         leader.start_mod_cluster(zkHandler);
 
-        // await connection
-        cout << "Connecting...\n";
-        int connection_socket = accept(server_socket, 
-            (sockaddr*)&server_address, (socklen_t*)&server_addrlen);
-        if (connection_socket < 0) {
-            cout << "ERROR: accept failed\n";
-            exit(1); 
-        }
-        cout << "Connected!\n";
-
-        /* main leader algorithm */
-
-        int edge_to_delete, iteration = 1;
+        int most_central_edge, iteration = 1;
+        cout << "About to begin\n";
+        int max_sd = server_socket;
         while(!leader.check_if_finished(zkHandler)) {
-            edge_to_delete = leader.find_central_edge(connection_socket);
-            if (edge_to_delete == -1) break;
-            leader.edges_to_delete.push(edge_to_delete);
-            leader.removal_order.push_back({edge_to_delete, iteration});
-            leader.calculate_modularity();
-            ++iteration;
-        }
 
-        cout << "Completed!\n";
+            // establish connection with /eb and /mod clusters
+            FD_ZERO(&readfds);
+            FD_SET(server_socket, &readfds);
+            if (eb_socket != 0) FD_SET(eb_socket, &readfds);
+            if (mod_socket != 0) FD_SET(mod_socket, &readfds);
+
+            max_sd = max(max_sd, eb_socket);
+            max_sd = max(max_sd, mod_socket);
+
+            activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
+            
+            if (STATE == WAITING && FD_ISSET(server_socket, &readfds)) {
+                // this means that cluster leaders 
+                // haven't connected to leader
+
+                cout << "Connecting...\n";
+                new_socket = accept(server_socket, 
+                    (sockaddr*)&server_address, (socklen_t*)&server_addrlen);
+                if (new_socket < 0) {
+                    cout << "ERROR (" << errno << "): failed accepting connection\n";
+                    exit(1);
+                }
+                cout << "Connection successful!\n";
+
+                // check ip address of client that has just connected
+                // to see which cluster leader he is
+
+                char *cli_addr = inet_ntoa(server_address.sin_addr);
+                cout << "Client connected " << cli_addr << "\n";
+                if (strcmp(cli_addr, &EB_CLUSTER_IP[0]) == 0) {
+                    eb_socket = new_socket;
+                }
+                else if (strcmp(cli_addr, &MOD_CLUSTER_IP[0]) == 0) {
+                    mod_socket = new_socket;
+                }
+
+                if (eb_socket != 0 && mod_socket != 0) STATE = CONNECTED;
+                continue;
+            }
+            cout << "Now algorithm\n";
+            break;
+        }
 
         close(server_socket);
-        close(connection_socket);
-
+        close(eb_socket);
+        close(mod_socket);
     }
     else {
         // this client failed to create /max znode, therfore it is a worker 
@@ -220,21 +319,45 @@ int main()
             exit(1);
         }
         LEADER_IP = ip_buff;
-
         cout << "Leader is: " << LEADER_IP << "\n";
-        
+
+        // setup client for communication with leader 
+        int client_socket = socket(AF_INET, SOCK_STREAM, 0);
+        if (client_socket < 0) {
+            cout << "ERROR: can't create client socket\n";
+            exit(1);
+        }
+
+        sockaddr_in leader_address;
+        leader_address.sin_family = AF_INET;
+        leader_address.sin_port = htons(PORT);
+
+        // convert IPv4 from text to binary form
+        r = inet_pton(AF_INET, &LEADER_IP[0], &leader_address.sin_addr);
+        if (r <= 0) {
+            cout << "ERROR (" << r << "): invalid address\n";
+        } 
+
+        r = connect(client_socket, (sockaddr*) &leader_address, sizeof(leader_address));
+        if (r != ZOK) {
+            cout << "ERROR (" << errno << "): can't connect to leader server\n";
+            exit(1);
+        }           
+        cout << "Connection with server successful!\n";
+
         // check to which cluster does this worker belong
         if (checkCluster(zkHandler, "/eb")) {
             cout << HOSTNAME << " is in /eb cluster\n";
 
             string path_to_node = "/eb/" + HOSTNAME;
             r = zoo_set(zkHandler, &path_to_node[0], &MY_IP[0], (int)MY_IP.size(), -1);
+            r = zoo_set(zkHandler, "/eb", "wait", 4, -1);
 
             /* ----- main edge betweenness algorithm  ----- */
             EdgeWorker ew(NODES_PATH, EDGES_PATH); 
 
-            char node_msg[20];
             // wait unit leader gives mark to start
+            char node_msg[20];
             do {
                 len = sizeof(node_msg);
                 r = zoo_get(zkHandler, "/eb", 0, node_msg, &len, NULL);
@@ -244,32 +367,6 @@ int main()
                 }
             } while (strcmp(node_msg, "wait") == 0);
 
-            // setup client for communication with leader 
-            int client_socket = socket(AF_INET, SOCK_STREAM, 0);
-            if (client_socket < 0) {
-                cout << "ERROR: can't create client socket\n";
-                exit(1);
-            }
-
-            sockaddr_in leader_address;
-            leader_address.sin_family = AF_INET;
-            leader_address.sin_port = htons(PORT);
-
-            // convert IPv4 from text to binary form
-            r = inet_pton(AF_INET, &LEADER_IP[0], &leader_address.sin_addr);
-            if (r <= 0) {
-                cout << "ERROR (" << r << "): invalid address\n";
-            } 
-
-            r = connect(client_socket, (sockaddr*) &leader_address, sizeof(leader_address));
-            if (r < 0) {
-                cout << "ERROR (" << errno << "): can't connect to leader server\n";
-                exit(1);
-            }
-
-            cout << "Connection successfull!\n";
-
-            // implement edge betweenness calc  
             int most_central_edge;
             while(ew.graph.num_edges) {
                 most_central_edge = ew.calculate_edge_betweenness(1, ew.graph.num_nodes); 
@@ -287,7 +384,6 @@ int main()
             cout << "DONE!\n";
 
             // mark to leader that algorithm has finished
-
             string msg = "finished";
             r = zoo_set(zkHandler, "/eb", &msg[0], (int)msg.size(), -1);
         }
@@ -296,11 +392,11 @@ int main()
 
             string path_to_node = "/mod/" + HOSTNAME;
             r = zoo_set(zkHandler, &path_to_node[0], &MY_IP[0], (int)MY_IP.size(), -1);
+            r = zoo_set(zkHandler, "/mod", "wait", 4, -1);
 
             // mark to leader that algorithm has finished
-
-            string msg = "finished";
-            r = zoo_set(zkHandler, "/mod", &msg[0], (int)msg.size(), -1);
+         //   string msg = "finished";
+          //  r = zoo_set(zkHandler, "/mod", &msg[0], (int)msg.size(), -1);
         }
         else {
             cout << "ERROR: no cluster found!\n";

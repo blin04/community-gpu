@@ -54,15 +54,13 @@ bool Leader::check_if_finished(zhandle_t *zh) {
         exit(1);
     }
 
-    cout << "ZNode values " << cluster1 << " " << cluster2 << "\n";
-
     if (strcmp(cluster1, "finished") == 0 && 
         strcmp(cluster2, "finished") == 0)
         return true;
     else return false;
 }
 
-int Leader::find_central_edge(int server_socket) {
+int Leader::find_central_edge(int eb_socket) {
     /*
     * this function gets the most central edge (edge with
     * highest value of edge betweenness) in a graph by communicating
@@ -70,7 +68,7 @@ int Leader::find_central_edge(int server_socket) {
     */
 
     int edge_id;
-    int r = read(server_socket, &edge_id, sizeof(int));  
+    int r = read(eb_socket, &edge_id, sizeof(int));  
     if (r < 0) {
         std::cout << "ERROR: can't read from /eb cluster \n";
         exit(1);
@@ -78,11 +76,11 @@ int Leader::find_central_edge(int server_socket) {
     return edge_id;
 }
 
-void Leader::calculate_modularity() {
+int Leader::calculate_modularity(int mod_socket) {
     /*
     * this function gets value of modularity for a graph
     * by communicating with the modularity cluster
     */
-    return;
+    return 0;
 }
 
