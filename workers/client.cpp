@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <string.h>
 #include <unistd.h>
@@ -21,8 +22,8 @@ string MY_IP = "";                        // ip address of current program
 string LEADER_IP = "";                    // ip address of leader
 string EB_CLUSTER_IP = "";                // ip address of eb cluster leader 
 string MOD_CLUSTER_IP = "";               // ip address of mod cluster leader
-string NODES_PATH = "/graph/t_n";  // path to file containing nodes
-string EDGES_PATH = "/graph/t_e";  // path to file containing edges
+string NODES_PATH = "/graph/nodes";  // path to file containing nodes
+string EDGES_PATH = "/graph/edges";  // path to file containing edges
 int PORT = 10000;                           // port to access leader server
 
 // enum used for tracking in which state algorithm is
@@ -259,6 +260,7 @@ int main()
         int most_central_edge, iteration = 1;
         double mod;
         cout << "About to begin\n";
+        ofstream log("results.log");
         int max_sd = server_socket;
         while(!leader.check_if_finished(zkHandler)) {
 
@@ -311,6 +313,10 @@ int main()
 
             mod = leader.calculate_modularity(mod_socket);
             if (mod == -1) break;
+
+            log << "--- ITERATION " << iteration << " ---\n";
+            log << "Edge deleted: " << most_central_edge << "\n";
+            log << "Modularity: " << mod << "\n";
             
             leader.modularity_values.push_back(mod);
             ++iteration;
@@ -451,14 +457,17 @@ int main()
             // calculate modularity
             double q;
             int edge_to_delete;
-            while(mw.graph.num_edges) {
+            Graph graph(NODES_PATH, EDGES_PATH);
+            vector<int> comm(graph.num_nodes + 1);
+            while(graph.num_edges) {
                 r = read(client_socket, &edge_to_delete, sizeof(int));
                 if (r < 0) {
                     cout << "ERROR (" << errno <<  "): failed reading from leader\n";
                     exit(1);
                 }
-                mw.graph.remove_edge(edge_to_delete);
-                q = mw.calculate_modularity(1, mw.graph.num_nodes);
+                graph.remove_edge(edge_to_delete);
+                graph.get_communities(comm);
+                q = mw.calculate_modularity(1, mw.graph.num_nodes, comm);
                 r = write(client_socket, &q, sizeof(double));
                 if (r < 0) {
                     cout << "ERROR (" << errno <<  "): failed writing to leader\n";

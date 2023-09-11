@@ -3,15 +3,18 @@ program used for testing performances of dist algorithm
 """
 
 import networkx as nx
+from networkx.algorithms.community.centrality import girvan_newman
 
-G = nx.Graph()
+graph = nx.Graph()
+full_graph = nx.Graph()
 
 # read nodes
 f = open("../dataset/t_n", 'r')
 
 for line in f:
     line = line.split(' ')
-    G.add_node(int(line[0]))
+    graph.add_node(int(line[0]))
+    full_graph.add_node(int(line[0]))
 
 f.close()
 
@@ -20,27 +23,40 @@ f = open("../dataset/t_e", 'r')
 
 for line in f:
     line = line.split(' ')
-    G.add_edge(int(line[0]), int(line[1]))
+    graph.add_edge(int(line[0]), int(line[1]))
+    full_graph.add_edge(int(line[0]), int(line[1]))
 
 f.close()
 
+# graph = nx.karate_club_graph()
+"""
+communities = girvan_newman(graph)
+node_groups = []
+for com in next(communities):
+    node_groups.append(list(com))
+
+print(node_groups)
+"""
 # calculate edge betweenness
 iteration = 0
-while G.number_of_edges() > 0:
-    betweenness = nx.edge_betweenness_centrality(G)
+while graph.number_of_edges() > 0:
     print("---- ITERATION " + str(iteration) + "---")
-    max_val = -1
-    edge_to_del = None
-    for edge, val in betweenness.items():
-        if float(val) > max_val:
-            max_val = val
-            edge_to_del = edge
+    print(full_graph.number_of_edges())
 
-    comp = nx.connected_components(G)
-    mod = nx.community.modularity(G, nx.connected_components(G))
+    betweenness = nx.edge_betweenness_centrality(graph)
+    edge_to_del = max(betweenness, key=betweenness.get)
+    graph.remove_edge(*edge_to_del)
+
+    if graph.number_of_edges() == 0:
+        break
+
+    comp = list(nx.connected_components(graph))
+    mod = nx.community.modularity(full_graph, comp)
 
     print("Modularity is: " + str(mod))
     print("Edge to delete: " + str(edge_to_del))
 
-    G.remove_edge(*edge_to_del)
+    communities = sorted(comp)
+    print(communities)
+
     iteration += 1

@@ -5,13 +5,11 @@ ModulWorker::ModulWorker(string nodes, string edges) : graph(nodes, edges) {
     cout << "ModulWorker initalized\n";
 }
 
-double ModulWorker::calculate_modularity(int start_node, int end_node) {
+double ModulWorker::calculate_modularity(int start_node, int end_node, vector<int> &communities) {
     /*
     * this function calculates modularity of a graph using 'classical' formula
     * i. e. formula that iterates over every pair of nodes
     */
-    vector<int> communities(graph.num_nodes + 1, -1);
-    graph.get_communities(communities);
 
     // modularity
     double Q = 0;
@@ -45,7 +43,7 @@ double ModulWorker::calculate_modularity(int start_node, int end_node) {
 
 double ModulWorker::calculate_modularity_comm(int start_node, int end_node) {
     /*
-    * this function calculates modularity of a graph using formula that
+    * this function calculates modularity of a graph using 'compacted' formula that
     * iterates over communities of that graph 
     */
     vector<int> communities(graph.num_nodes + 1, -1);
