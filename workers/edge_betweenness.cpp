@@ -56,20 +56,20 @@ int EdgeWorker::calculate_edge_betweenness(int start_node, int end_node) {
 
         // find leaf nodes
         bool leaf;
-        for (int node = 1; node <= graph.num_nodes; node++) {
-            if (distance[node] == -1) continue;
+        for (int leaf_node = 1; leaf_node <= graph.num_nodes; leaf_node++) {
+            if (distance[leaf_node] == -1) continue;
 
             leaf = true;
-            for (int x : graph.adj_list[node]) {
-                if (distance[x] > distance[node]) leaf = false;
+            for (int x : graph.adj_list[leaf_node]) {
+                if (distance[x] > distance[leaf_node]) leaf = false;
             }
-            if (leaf) q.push(node);
+            if (leaf) q.push(leaf_node);
         } 
 
         // find betweenness values
         fill(visited.begin(), visited.end(), false);
         while(!q.empty()) {
-            int curr = q.front();
+            curr = q.front();
             q.pop();
 
             if (visited[curr]) continue;
@@ -79,41 +79,41 @@ int EdgeWorker::calculate_edge_betweenness(int start_node, int end_node) {
             // assigned a betweenness value
             double sum = 1;
             for (int neighbour : graph.adj_list[curr]) {
-                if (visited[neighbour]) {
+                if (betweenness[graph.get_edge_id(curr, neighbour)] != 0) {
                     sum += betweenness[graph.get_edge_id(curr, neighbour)];
                 } 
             }
 
             // assigning betweenness values
             for (int neighbour : graph.adj_list[curr]) {
-                if (!visited[neighbour]) {
+                if (!visited[neighbour] && distance[neighbour] == distance[curr] - 1) {
                     betweenness[graph.get_edge_id(curr, neighbour)] = (weight[neighbour] / weight[curr]) * sum;
                     q.push(neighbour);
                 }
             }
         }
 
-        /*std::cout << "-- BETWEENNESS SCORE --\n";
+        /* std::cout << "-- BETWEENNESS SCORE --\n";
         for (double x : betweenness) std::cout << x << " ";
-        std::cout << "\n";
-        */
+        std::cout << "\n"; */
+        
 
 
         // add betweenness scores to total betweenness values
         for (int i = 1; i <= graph.orig_num_edges; i++) total_betweenness[i] += betweenness[i];
     }
 
-    std::cout << "-- TOTAL BETWEENNESS SCORE --\n";
+    //std::cout << "-- TOTAL BETWEENNESS SCORE --\n";
     int most_central_edge = -1;
     double centrality = -1;
     for (int i = 1; i <= graph.orig_num_edges; i++) {
-        cout << total_betweenness[i] << " ";
+        //cout << total_betweenness[i] << " ";
         if (total_betweenness[i] > centrality) {
             centrality = total_betweenness[i];
             most_central_edge = i;
         }
     }
-    cout << "\n";
+    //cout << "\n";
 
     return most_central_edge;
 }

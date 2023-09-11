@@ -21,8 +21,8 @@ string MY_IP = "";                        // ip address of current program
 string LEADER_IP = "";                    // ip address of leader
 string EB_CLUSTER_IP = "";                // ip address of eb cluster leader 
 string MOD_CLUSTER_IP = "";               // ip address of mod cluster leader
-string NODES_PATH = "/graph/test_nodes";  // path to file containing nodes
-string EDGES_PATH = "/graph/test_edges";  // path to file containing edges
+string NODES_PATH = "/graph/t_n";  // path to file containing nodes
+string EDGES_PATH = "/graph/t_e";  // path to file containing edges
 int PORT = 10000;                           // port to access leader server
 
 // enum used for tracking in which state algorithm is
@@ -316,7 +316,7 @@ int main()
             ++iteration;
         }
 
-        cout << "FINISHED!!\n";
+        cout << "Done!\n";
 
         // find highest modularity value 
         int best_it = -1;
@@ -419,7 +419,7 @@ int main()
                 cout << "Removing " << most_central_edge << "...\n";
                 ew.graph.remove_edge(most_central_edge);
             }
-            cout << "DONE!\n";
+            cout << "Done!\n";
             int tmp = -1;
             write(client_socket, &tmp, sizeof(int));
 
@@ -465,7 +465,7 @@ int main()
                     exit(1);
                 }
             }
-            cout << "DONE!\n";
+            cout << "Done!\n";
             int tmp = -1;
             write(client_socket, &tmp, sizeof(int));
 

@@ -24,16 +24,11 @@ for line in f:
 
 f.close()
 
-comp = nx.connected_components(G)
-mod = nx.community.modularity(G, nx.connected_components(G))
-print("Modularity is: " + str(mod))
-
 # calculate edge betweenness
+iteration = 0
 while G.number_of_edges() > 0:
     betweenness = nx.edge_betweenness_centrality(G)
-    print(" --------- ")
-    print(betweenness)
-
+    print("---- ITERATION " + str(iteration) + "---")
     max_val = -1
     edge_to_del = None
     for edge, val in betweenness.items():
@@ -41,5 +36,11 @@ while G.number_of_edges() > 0:
             max_val = val
             edge_to_del = edge
 
-    print(edge_to_del)
+    comp = nx.connected_components(G)
+    mod = nx.community.modularity(G, nx.connected_components(G))
+
+    print("Modularity is: " + str(mod))
+    print("Edge to delete: " + str(edge_to_del))
+
     G.remove_edge(*edge_to_del)
+    iteration += 1
