@@ -1,8 +1,12 @@
 #include <iostream>
 #include <fstream>
+
 #include "graph.h"
 
 Graph::Graph(string nodes_file, string edges_file) {
+    /*
+    * constructor of graph class
+    */
     num_edges = num_nodes = 0;
 
     /* reading nodes */
@@ -48,7 +52,9 @@ void Graph::dfs(int node, vector<int> &communities, int comm_id) {
 }
 
 void Graph::remove_edge(int node1, int node2) {
-    /* removes given edge */
+    /* 
+    * removes given edge
+    */
 
     // removing in node1's adjacency list
     for (auto it = adj_list[node1].begin(); it != adj_list[node1].end(); it++) {
@@ -74,6 +80,9 @@ void Graph::remove_edge(int node1, int node2) {
 }
 
 void Graph::remove_edge(int edge_id) {
+    /*
+    * removes an edge with the given id
+    */
 
     pair<int, int> edge = {-1, -1};
     for (auto it = edge_ids.begin(); it != edge_ids.end(); it++) {
@@ -82,25 +91,33 @@ void Graph::remove_edge(int edge_id) {
 
     if (edge.first == -1) {
         cout << "ERROR: couldn't find edge with given ID\n";
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     remove_edge(edge.first, edge.second);
 }
 
 int Graph::get_edge_id(int node1, int node2) {
+    /*
+    * returns id of given edge
+    */
+
     if (edge_ids.find({node1, node2}) == edge_ids.end()) 
         return edge_ids[{node2, node1}];
     else return edge_ids[{node1, node2}];
 }
 
 int Graph::node_degree(int node) {
-    /* returns degree of a given node */
+    /* 
+    * returns degree of a given node
+    */
     return (int)adj_list[node].size();
 }
 
 void Graph::print_nodes() {
-    /* prints out nodes of a graph */
+    /* 
+    * prints out nodes of a graph
+    */
 
     cout << "--- PRINTING NODES ---\n";
     for (int i = 1; i <= num_nodes; i++) {
@@ -115,7 +132,6 @@ void Graph::print_edges() {
     }
 }
 
-// to do...
 void Graph::get_communities(vector<int> &communities) {
     /* 
     * this function returns components of graph which 
@@ -125,7 +141,7 @@ void Graph::get_communities(vector<int> &communities) {
 
     if ((int)communities.size() != num_nodes + 1) {
        cout << "ERROR: vector given is not of expected size!\n";
-       exit(1);
+       exit(EXIT_FAILURE);
     }
 
     int comm_id = 1;

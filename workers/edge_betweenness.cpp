@@ -1,5 +1,6 @@
 #include <queue>
 #include <iostream>
+
 #include "edge_betweenness.h"
 
 EdgeWorker::EdgeWorker(string nodes, string edges) : graph(nodes, edges) {

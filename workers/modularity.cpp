@@ -1,4 +1,5 @@
 #include <iostream>
+
 #include "modularity.h"
 
 ModulWorker::ModulWorker(string nodes, string edges) : graph(nodes, edges) {
@@ -43,8 +44,11 @@ double ModulWorker::calculate_modularity(int start_node, int end_node, vector<in
 
 double ModulWorker::calculate_modularity_comm(int start_node, int end_node) {
     /*
-    * this function calculates modularity of a graph using 'compacted' formula that
-    * iterates over communities of that graph 
+    * this function calculates modularity of a graph using 'compacted' formula
+    * i.e. formula that iterates over communities of that graph 
+    * 
+    * (this function isn't primarily used so its implementation 
+    * isn't fully correct, it should be revised asap)
     */
     vector<int> communities(graph.num_nodes + 1, -1);
     graph.get_communities(communities);
