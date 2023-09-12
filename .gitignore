@@ -8,6 +8,7 @@ dataset/test_nodes
 dataset/test_edges
 workers/.vscode
 workers/bin
+workers/results.log
 zklibs/
 
 !workers/client.c
