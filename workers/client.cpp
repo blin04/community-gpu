@@ -105,9 +105,6 @@ void setClustersIP(zhandle_t *zh) {
         }
         mod_state = node_msg;
 
-        //cout << "STRINGS: " << eb_state << "|" << mod_state << "\n";
-
-        sleep(1);
     } while (strncmp(&eb_state[0], "wait", 4) != 0 
         || strncmp(&mod_state[0], "wait", 4) != 0);
 
@@ -119,7 +116,7 @@ void setClustersIP(zhandle_t *zh) {
     r = zoo_get(zh, &eb_path[0], 0, ip_buff, &len, NULL);
     if (r != ZOK) {
         cout << "ERROR: can't get EB cluster IP address\n";
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     EB_CLUSTER_IP = ip_buff;
 
@@ -127,7 +124,7 @@ void setClustersIP(zhandle_t *zh) {
     r = zoo_get(zh, &mod_path[0], 0, ip_buff, &len, NULL);
     if (r != ZOK) {
         cout << "ERROR: can't get MOD cluster IP address\n";
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     MOD_CLUSTER_IP = ip_buff;
 
@@ -289,8 +286,6 @@ int main()
         double mod;
         int max_sd = server_socket;
 
-        cout << "About to begin\n";
-
         // file used for logging intermediate results of algorithm
         ofstream log("/project/results.log");         
 
@@ -313,14 +308,12 @@ int main()
             // some machines still haven't connected to leader
             if (STATE == WAITING && FD_ISSET(server_socket, &readfds)) {
 
-                cout << "Connecting...\n";
                 new_socket = accept(server_socket, 
                     (sockaddr*)&server_address, (socklen_t*)&server_addrlen);
                 if (new_socket < 0) {
                     cout << "ERROR (" << errno << "): failed accepting connection\n";
-                    exit(1);
+                    exit(EXIT_FAILURE);
                 }
-                cout << "Connection successful!\n";
 
                 // check ip address of client that has just connected
                 // to see which cluster leader he is
@@ -344,7 +337,7 @@ int main()
 
             // get id of an edge that has highest value of centrality
             most_central_edge = leader.find_central_edge(eb_socket);
-            if (most_central_edge == -1) break;
+            // if (most_central_edge == -1) break;
 
             // update removal order 
             leader.removal_order.push_back({iteration, most_central_edge});
@@ -352,7 +345,7 @@ int main()
 
             // calculate value of modularity for current partition
             mod = leader.calculate_modularity(mod_socket);
-            if (mod == -1) break;
+            // if (mod == -1) break;
             leader.modularity_values.push_back(mod);
 
             // log intermediate results
@@ -483,15 +476,14 @@ int main()
                     exit(EXIT_FAILURE);
                 }
 
-                cout << "Removing " << most_central_edge << "...\n";
                 ew.graph.remove_edge(most_central_edge);
             }
             cout << "Done!\n";
 
             // by sending -1 to leader, cluster signals to leader 
             // that it finished calculating
-            int tmp = -1;
-            write(client_socket, &tmp, sizeof(int));
+            //int tmp = -1;
+            //write(client_socket, &tmp, sizeof(int));
 
             // mark to leader that algorithm has finished
             string msg = "finished";
@@ -559,9 +551,9 @@ int main()
 
             // by sending -1 to leader, cluster signals to leader 
             // that it finished calculating
-            int tmp = -1;
-            write(client_socket, &tmp, sizeof(int));
-
+            //int tmp = -1;
+            //write(client_socket, &tmp, sizeof(int));
+            
             // mark to leader that algorithm has finished
             string msg = "finished";
             r = zoo_set(zkHandler, "/mod", &msg[0], (int)msg.size(), -1);

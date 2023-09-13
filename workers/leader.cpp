@@ -86,6 +86,7 @@ double Leader::calculate_modularity(int mod_socket) {
     * this function gets value of modularity for a graph
     * by communicating with the modularity cluster
     */
+    if (graph.num_edges == 0) return 0;
 
     int edge_to_delete = edges_to_delete.front();
     edges_to_delete.pop();
@@ -98,7 +99,7 @@ double Leader::calculate_modularity(int mod_socket) {
 
     double q;
     r = read(mod_socket, &q, sizeof(double));
-    if (r < 0) {
+    if (r < 0 && errno != 104) {
         cout << "ERROR (" << errno << "): failed reading from mod cluster\n";
         exit(EXIT_FAILURE);
     }
