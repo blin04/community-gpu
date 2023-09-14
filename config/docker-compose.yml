@@ -23,7 +23,7 @@ services:
       - ~/Documents/Petnica/Project2023/Code/dataset:/graph
     image: zklibs
     environment:
-      ZOO_MY_ID: "2"
+      ZOO_MY_ID: 2
 
   node3:
     hostname: node3
@@ -35,7 +35,19 @@ services:
       - ~/Documents/Petnica/Project2023/Code/dataset:/graph
     image: zklibs
     environment:
-      ZOO_MY_ID: "3"
+      ZOO_MY_ID: 3
+
+  node4:
+    hostname: node4
+    networks:
+      - net_blin
+    volumes:
+      - ~/Documents/Petnica/Project2023/Code/system:/project
+      - ~/Documents/Petnica/Project2023/Code/config/zoo.cfg:/conf/zoo.cfg 
+      - ~/Documents/Petnica/Project2023/Code/dataset:/graph
+    image: zklibs
+    environment:
+      ZOO_MY_ID: 4
 
 networks:
   net_blin:
