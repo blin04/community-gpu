@@ -15,6 +15,7 @@
 #include "../includes/leader.h"
 #include "../includes/edge_betweenness.h"
 #include "../includes/modularity.h"
+#include "../includes/globals.h"
 
 using namespace std;
 
@@ -23,8 +24,7 @@ string MY_IP = "";                        // ip address of current program
 string LEADER_IP = "";                    // ip address of leader
 string EB_CLUSTER_IP = "";                // ip address of eb cluster leader 
 string MOD_CLUSTER_IP = "";               // ip address of mod cluster leader
-string NODES_PATH = "/graph/nodes";       // path to file containing nodes
-string EDGES_PATH = "/graph/edges";       // path to file containing edges
+
 int MAIN_PORT = 10000;                    // port to access main leader server
 int CLUSTER_PORT = 11000;                 // port to access cluster leaders
 
@@ -34,14 +34,6 @@ enum algo_state {
     CONNECTED,
     STARTED
 } STATE;
-
-// size of eb cluster and nodes assigned to that cluster (first node specified becomes cluster leader)
-int EB_CNT = 2;
-string EB_NODES[] = {"node2", "node4"};
-
-// size of mod cluster and nodes assigned to that cluster (first node specified becomes cluster leader)
-int MOD_CNT = 1;
-string MOD_NODES[] = {"node3"};
 
 void setIPAdress() {
     /*
@@ -527,10 +519,7 @@ int main()
                     ++num_of_connected;
                 }
             }
-
             cout << "Connected all workers!\n";
-
-            EdgeWorker ew(NODES_PATH, EDGES_PATH); 
 
             // wait until leader gives mark to start calculating
             char node_msg[20];
@@ -543,30 +532,96 @@ int main()
                 }
             } while (strcmp(node_msg, "wait") == 0);
 
-            // main part of /eb cluster calculation
-            int most_central_edge;
-            while(ew.graph.num_edges) {
-                // calculate edge with highest value
-                // of centrality
-                most_central_edge = ew.calculate_edge_betweenness(1, ew.graph.num_nodes); 
+            // calculate edge betweenness
+            Graph graph(NODES_PATH, EDGES_PATH);
+            bool workers_finished = true;
+            vector<double> betweenness(graph.num_edges + 1), input_betweenness(graph.num_edges + 1);
 
-                // send result to main leader
-                r = write(client_socket, &most_central_edge, sizeof(int));
-                if (r < 0) {
-                    cout << "ERROR: failed sending message to server\n";
-                    exit(EXIT_FAILURE);
+            while(graph.num_edges) {
+                if (workers_finished) {
+                    // start workers
+                    int a = 1;
+                    int b = graph.num_nodes;
+                    r = write(workers[0], &a, sizeof(a));
+                    if (r < 0) {
+                        cout << "ERROR (" << errno << "): failed writing to worker\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    r = write(workers[0], &b, sizeof(b));
+                    if (r < 0) {
+                        cout << "ERROR (" << errno << "): failed writing to worker\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    workers_finished = false;
                 }
 
-                ew.graph.remove_edge(most_central_edge);
+                // add worker sockets to fd_set
+                FD_ZERO(&readfds);
+
+                FD_SET(server_socket, &readfds);
+                max_sd = server_socket;
+                //cout << "namestanje worker soketa\n";
+                for (int i = 0; i < EB_CNT - 1; i++) {
+                    FD_SET(workers[i], &readfds);
+                    max_sd = max(max_sd, workers[i]);
+                }
+
+                // check if all workers finished
+                activity = select(max_sd + 1, &readfds, NULL, NULL, &tv);
+
+                workers_finished = true; 
+                for (int i = 0; i < EB_CNT - 1; i++) {
+                    if (!FD_ISSET(workers[i], &readfds)) {
+                        workers_finished = false;
+                    }
+                }
+
+                if (workers_finished) {
+                    // read results from workers
+                    fill(betweenness.begin(), betweenness.end(), 0);
+                    for (int i = 0; i < EB_CNT - 1; i++) {
+                        r = read(workers[i], input_betweenness.data(), 
+                            input_betweenness.size() * sizeof(input_betweenness[0]));
+                        if (r < 0) {
+                            cout << "ERROR (" << errno << "): failed reading from worker!\n";
+                            exit(EXIT_FAILURE);
+                        }
+
+                        for (int i = 1; i <= graph.orig_num_edges; i++) {
+                            betweenness[i] += input_betweenness[i];    
+                        }
+                    }
+
+                    // find edge with highest centrality value
+                    // and remove it
+                    int edge_to_delete;
+                    double highest_betweenness = -1;
+                    for (int i = 1; i <= graph.orig_num_edges; i++) {
+                        if (betweenness[i] > highest_betweenness) {
+                            highest_betweenness = betweenness[i];
+                            edge_to_delete = i;
+                        }
+                    }
+
+                    graph.remove_edge(edge_to_delete);
+
+                    // send most central edge to main leader and to workers
+                    r = write(client_socket, &edge_to_delete, sizeof(edge_to_delete));
+                    if (r < 0) {
+                        cout << "ERROR (" << errno << "): couldn't send result to main leader\n";
+                    }
+
+                    for (int i = 0; i < EB_CNT - 1; i++) {
+                        r = write(workers[i], &edge_to_delete, sizeof(edge_to_delete));
+                        if (r < 0) {
+                            cout << "ERROR (" << errno << "): couldn't send result to workers\n";
+                        }
+                    }
+                }
             }
             cout << "Done!\n";
 
-            // by sending -1 to leader, cluster signals to leader 
-            // that it finished calculating
-            //int tmp = -1;
-            //write(client_socket, &tmp, sizeof(int));
-
-            // mark to leader that algorithm has finished
+            // mark to leader that cluster has finished
             string msg = "finished";
             r = zoo_set(zkHandler, "/eb", &msg[0], (int)msg.size(), -1);
             if (r != ZOK) {
@@ -637,12 +692,7 @@ int main()
             }
             cout << "Done!\n";
 
-            // by sending -1 to leader, cluster signals to leader 
-            // that it finished calculating
-            //int tmp = -1;
-            //write(client_socket, &tmp, sizeof(int));
-            
-            // mark to leader that algorithm has finished
+            // mark to leader that cluster has finished
             string msg = "finished";
             r = zoo_set(zkHandler, "/mod", &msg[0], (int)msg.size(), -1);
         }

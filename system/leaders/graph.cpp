@@ -90,7 +90,7 @@ void Graph::remove_edge(int edge_id) {
     }
 
     if (edge.first == -1) {
-        cout << "ERROR: couldn't find edge with given ID\n";
+        cout << "ERROR: couldn't find edge with ID " << edge_id << "\n";
         exit(EXIT_FAILURE);
     }
 

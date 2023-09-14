@@ -5,5 +5,5 @@ class EdgeWorker {
         Graph graph;
 
         EdgeWorker(string nodes, string edges);
-        int calculate_edge_betweenness(int start_node, int end_node);      
+        vector<double> calculate_edge_betweenness(int start_node, int end_node);      
 };

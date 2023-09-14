@@ -7,7 +7,7 @@ EdgeWorker::EdgeWorker(string nodes, string edges) : graph(nodes, edges) {
     std::cout << "Edge Worker initialized\n";
 }
 
-int EdgeWorker::calculate_edge_betweenness(int start_node, int end_node) {
+vector<double> EdgeWorker::calculate_edge_betweenness(int start_node, int end_node) {
     /*
     * this function calculates edge betweenness values for all edges in a graph
     */
@@ -104,17 +104,5 @@ int EdgeWorker::calculate_edge_betweenness(int start_node, int end_node) {
         for (int i = 1; i <= graph.orig_num_edges; i++) total_betweenness[i] += betweenness[i];
     }
 
-    //std::cout << "-- TOTAL BETWEENNESS SCORE --\n";
-    int most_central_edge = -1;
-    double centrality = -1;
-    for (int i = 1; i <= graph.orig_num_edges; i++) {
-        //cout << total_betweenness[i] << " ";
-        if (total_betweenness[i] > centrality) {
-            centrality = total_betweenness[i];
-            most_central_edge = i;
-        }
-    }
-    //cout << "\n";
-
-    return most_central_edge;
+    return total_betweenness;
 }
