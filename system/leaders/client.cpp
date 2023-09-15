@@ -255,7 +255,7 @@ int main()
             exit(EXIT_FAILURE);
         }
 
-        // listen for 
+        // listen for new connections
         r = listen(server_socket, 2);
         if (r < 0) {
             cout << "ERROR (" << errno << "): listen failed\n";
@@ -484,7 +484,6 @@ int main()
 
             int num_of_connected = 0;
             while(num_of_connected != EB_CNT - 1) {
-                sleep(1);
                 /*
                 * in this loop cluster leader waits until all workers have connected to him
                 */
@@ -513,10 +512,7 @@ int main()
                     cout << "Connected with worker\n";
 
                     // store new_socket in array
-                    for (int i = 0; i < EB_CNT; i++) {
-                        if (workers[i] == -1) workers[i] = new_socket;
-                    }
-                    ++num_of_connected;
+                    workers[num_of_connected++] = new_socket;
                 }
             }
             cout << "Connected all workers!\n";
@@ -537,20 +533,43 @@ int main()
             bool workers_finished = true;
             vector<double> betweenness(graph.num_edges + 1), input_betweenness(graph.num_edges + 1);
 
+            // split node range into intervals, 
+            // each worker is assigned one of them 
+            vector<pair<int, int>> intervals;
+            int k = graph.num_nodes / (EB_CNT - 1);
+            int r = graph.num_nodes % (EB_CNT - 1);
+
+            int start = 1, end;
+            while(start < graph.num_nodes) {
+                end = start + (k - 1); 
+                if (r) {
+                    ++end;
+                    --r;
+                }
+                intervals.push_back({start, end});
+                start = end + 1;
+            }
+
+            if ((int)intervals.size() != EB_CNT - 1) {
+                cout << "ERROR: failed splitting intervals\n";
+                exit(EXIT_FAILURE);
+            }
+
+            cout << "About to begin!\n";
             while(graph.num_edges) {
                 if (workers_finished) {
                     // start workers
-                    int a = 1;
-                    int b = graph.num_nodes;
-                    r = write(workers[0], &a, sizeof(a));
-                    if (r < 0) {
-                        cout << "ERROR (" << errno << "): failed writing to worker\n";
-                        exit(EXIT_FAILURE);
-                    }
-                    r = write(workers[0], &b, sizeof(b));
-                    if (r < 0) {
-                        cout << "ERROR (" << errno << "): failed writing to worker\n";
-                        exit(EXIT_FAILURE);
+                    for (int i = 0; i < EB_CNT - 1; i++) {
+                        r = write(workers[i], &intervals[i].first, sizeof(intervals[i].first));
+                        if (r < 0) {
+                            cout << "ERROR (" << errno << "): failed writing to worker\n";
+                            exit(EXIT_FAILURE);
+                        }
+                        r = write(workers[i], &intervals[i].second, sizeof(intervals[i].second));
+                        if (r < 0) {
+                            cout << "ERROR (" << errno << "): failed writing to worker\n";
+                            exit(EXIT_FAILURE);
+                        }
                     }
                     workers_finished = false;
                 }
@@ -560,7 +579,6 @@ int main()
 
                 FD_SET(server_socket, &readfds);
                 max_sd = server_socket;
-                //cout << "namestanje worker soketa\n";
                 for (int i = 0; i < EB_CNT - 1; i++) {
                     FD_SET(workers[i], &readfds);
                     max_sd = max(max_sd, workers[i]);

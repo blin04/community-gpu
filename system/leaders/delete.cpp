@@ -12,15 +12,9 @@ ZooKeeper tree after it finishes.
 
 #include <zookeeper/zookeeper.h>
 
+#include "../includes/globals.h"
+
 using namespace std;
-
-// size of eb cluster and nodes assigned to that cluster
-int EB_CNT = 2;
-string EB_NODES[] = {"node2", "node4"};
-
-// size of mod cluster and nodes assigned to that cluster
-int MOD_CNT = 1;
-string MOD_NODES[] = {"node3"};
 
 int main()
 {
