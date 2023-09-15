@@ -620,7 +620,6 @@ int main()
                             edge_to_delete = i;
                         }
                     }
-
                     graph.remove_edge(edge_to_delete);
 
                     // send most central edge to main leader and to workers
@@ -646,16 +645,13 @@ int main()
                 cout << "ERROR (" << errno << "): can't set state of /eb cluster \n";
                 exit(EXIT_FAILURE);
             }
+
+            // close socket connections
+            for (int i = 0; i < EB_CNT - 1; i++) 
+                close(workers[i]); 
         }
         else if (checkCluster(zkHandler, "/mod")) {
             cout << HOSTNAME << " is in /mod cluster\n";
-
-            // set limit for amount of connections
-        //    r = listen(server_socket, MOD_CNT);
-        //    if (r < 0) {
-        //        cout << "ERROR (" << errno <<"): listen failed for /mod\n";
-        //        exit(EXIT_FAILURE);
-        //    }
 
             // set necessary znodes
             string path_to_node = "/mod/" + HOSTNAME;
@@ -670,8 +666,61 @@ int main()
                 exit(EXIT_FAILURE);
             }
 
-            ModulWorker mw(NODES_PATH, EDGES_PATH);
-    
+            // set limit for amount of connections
+            r = listen(server_socket, MOD_CNT);
+            if (r < 0) {
+                cout << "ERROR (" << errno <<"): listen failed for /mod\n";
+                exit(EXIT_FAILURE);
+            }
+
+            //struct for monitoring worker sockets
+            fd_set readfds;
+            int max_sd, activity, new_socket;
+
+            // struct used for timeout on select()
+            timeval tv;
+            tv.tv_sec = 3;
+            tv.tv_usec = 0;
+
+            // array of woker sockets
+            int workers[MOD_CNT - 1];
+            fill(workers, workers + MOD_CNT - 1, -1);
+
+            int num_of_connected = 0;
+            while(num_of_connected != MOD_CNT - 1) {
+                /*
+                * in this loop cluster leader waits until all workers have connected to him
+                */
+                FD_ZERO(&readfds);
+                
+                FD_SET(server_socket, &readfds);
+                max_sd = server_socket;
+
+                for (int i = 0; i < MOD_CNT - 1; i++) {
+                    if (workers[i] != -1) {
+                        max_sd = max(max_sd, workers[i]);
+                        FD_SET(workers[i], &readfds);
+                    }
+                }
+
+                activity = select(max_sd + 1, &readfds, NULL, NULL, &tv);
+
+                if (FD_ISSET(server_socket, &readfds)) {
+                    // some worker is trying to connect
+                    new_socket = accept(server_socket, 
+                        (sockaddr*)&cluster_leader_addr, (socklen_t*)&cluster_leader_addrlen);
+                    if (new_socket < 0) {
+                        cout << "ERROR (" << strerror(errno) << "): failed accepting connection from worker\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    cout << "Connected with worker\n";
+
+                    // store new_socket in array
+                    workers[num_of_connected++] = new_socket;
+                }
+            }
+            cout << "Connected all workers!\n";
+
             // wait until leader gives mark to start calculating
             char node_msg[20];
             do {
@@ -683,29 +732,114 @@ int main()
                 }
             } while (strcmp(node_msg, "wait") == 0);
 
-            // main part of /mod cluster calculation
-            double q;
+            // some variables used to calculate modularity 
+            double total_q, q;
             int edge_to_delete;
+            bool workers_finished = true;
             Graph graph(NODES_PATH, EDGES_PATH);
             vector<int> comm(graph.num_nodes + 1);
-            while(graph.num_edges) {
-                // read from main leader which edge is to be deleted
-                r = read(client_socket, &edge_to_delete, sizeof(int));
-                if (r < 0) {
-                    cout << "ERROR (" << errno <<  "): failed reading from leader\n";
-                    exit(EXIT_FAILURE);
+
+            // split node range into intervals, 
+            // each worker is assigned one of them 
+            vector<pair<int, int>> intervals;
+            int k = graph.num_nodes / (MOD_CNT - 1);
+            int r = graph.num_nodes % (MOD_CNT - 1);
+
+            int start = 1, end;
+            while(start < graph.num_nodes) {
+                end = start + (k - 1); 
+                if (r) {
+                    ++end;
+                    --r;
                 }
-                graph.remove_edge(edge_to_delete);
-                graph.get_communities(comm);
+                intervals.push_back({start, end});
+                start = end + 1;
+            }
 
-                // calculate modularity
-                q = mw.calculate_modularity(1, mw.graph.num_nodes, comm);
+            if ((int)intervals.size() != MOD_CNT - 1) {
+                cout << "ERROR: failed splitting intervals\n";
+                exit(EXIT_FAILURE);
+            }
 
-                // send results to main leader
-                r = write(client_socket, &q, sizeof(double));
-                if (r < 0) {
-                    cout << "ERROR (" << errno <<  "): failed writing to leader\n";
-                    exit(EXIT_FAILURE);
+            // calculate modularity
+            while(graph.num_edges) {
+                if (workers_finished) {
+                    // read edge that should be deleted and delete it
+                    r = read(client_socket, &edge_to_delete, sizeof(edge_to_delete));
+                    if (r < 0 ) {
+                        cout << "ERROR (" << errno << "): failed reading edge to delete\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    graph.remove_edge(edge_to_delete);
+
+                    // get communities of current partition
+                    graph.get_communities(comm);
+
+                    // start workers
+                    for (int i = 0; i < MOD_CNT - 1; i++) {
+                        // send starting node to worker
+                        r = write(workers[i], &intervals[i].first, sizeof(intervals[i].first));
+                        if (r < 0) {
+                            cout << "ERROR: (" << errno << "): can't write to worker\n";
+                            exit(EXIT_FAILURE);
+                        }
+
+                        // send ending node to worker
+                        r = write(workers[i], &intervals[i].second, sizeof(intervals[i].second));
+                        if (r < 0) {
+                            cout << "ERROR: (" << errno << "): can't write to worker\n";
+                            exit(EXIT_FAILURE);
+                        }
+
+                        // send vector of communities to worker
+                        r = write(workers[i], comm.data(), comm.size() * sizeof(comm[0]));
+                        if (r < 0) {
+                            cout << "ERROR: (" << errno << "): can't send communities to worker\n";
+                            exit(EXIT_FAILURE);
+                        }
+                    }
+                    workers_finished = false;
+                }
+
+                // add sockes to fd_set
+                FD_ZERO(&readfds);
+
+                FD_SET(server_socket, &readfds);
+                max_sd = server_socket;
+                for (int i = 0; i < MOD_CNT - 1; i++) {
+                    FD_SET(workers[i], &readfds);
+                    max_sd = max(max_sd, workers[i]);
+                }
+
+                // check if workers finished
+                activity = select(max_sd + 1, &readfds, NULL, NULL, &tv);
+
+                workers_finished = true;
+                for (int i = 0; i < MOD_CNT - 1; i++) {
+                    if (!FD_ISSET(workers[i], &readfds)) {
+                        workers_finished = false;
+                    }
+                }
+
+                // read results from workers
+                if (workers_finished) {
+                    total_q = 0;
+                    for (int i = 0; i < MOD_CNT - 1; i++) {
+                        r = read(workers[i], &q, sizeof(q));
+                        if (r < 0) {
+                            cout << "ERROR (" << errno << "): failed reading from worker!\n";
+                            exit(EXIT_FAILURE);
+                        }
+                        total_q += q;
+                    }
+
+                    // send result to main leader
+                    r = write(client_socket, &total_q, sizeof(total_q));
+                    if (r < 0) {
+                        cout << "ERROR (" << errno << "): failed writing to main leader!\n";
+                        exit(EXIT_FAILURE);
+                    }
+
                 }
             }
             cout << "Done!\n";
@@ -713,6 +847,16 @@ int main()
             // mark to leader that cluster has finished
             string msg = "finished";
             r = zoo_set(zkHandler, "/mod", &msg[0], (int)msg.size(), -1);
+
+            // this is temporary solution, should fix later
+            int tmp = -1;
+            for (int i = 0; i < MOD_CNT - 1; i++) {
+                write(workers[i], &tmp, sizeof(tmp));
+            }
+
+            // close socket connections
+            for (int i = 0; i < MOD_CNT - 1; i++)
+                close(workers[i]);
         }
         else {
             cout << "ERROR: no cluster found!\n";

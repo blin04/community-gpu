@@ -10,6 +10,7 @@
 #include <zookeeper/zookeeper.h>
 
 #include "../includes/edge_betweenness.h"
+#include "../includes/modularity.h"
 #include "../includes/globals.h"
 
 using namespace std;
@@ -92,8 +93,8 @@ int main()
 
     if (checkCluster(zkHandler, "/eb")) {
         // this worker is assigned to eb cluster
-        // get IP address of cluster leader
 
+        // get IP address of cluster leader
         int len = sizeof(LEADER_IP);
         char ip_buff[len] = "";
         string path_to_leader = "/eb/" + EB_NODES[0];
@@ -132,6 +133,7 @@ int main()
         }
         cout << "Connection with cluster leader sucessful!\n";
 
+        // calculate edge betweenness
         EdgeWorker worker(NODES_PATH, EDGES_PATH);
 
         int start_node, end_node, edge_to_delete;
@@ -172,7 +174,84 @@ int main()
     else if (checkCluster(zkHandler, "/mod")) {
         // this worker is assigned to mod cluster
 
-        cout << "For now do nothing...\n";
+        // get IP address of cluster leader
+        int len = sizeof(LEADER_IP);
+        char ip_buff[len] = "";
+        string path_to_leader = "/mod/" + MOD_NODES[0];
+        int r = zoo_get(zkHandler, &path_to_leader[0], 0, ip_buff, &len, NULL);
+        if (r != ZOK) {
+            cout << "ERROR (" << r << "): can't get leader ip \n";
+            exit(EXIT_FAILURE);
+        }
+        LEADER_IP = ip_buff;
+        cout << "Cluster Leader IP: " << LEADER_IP << "\n";
+
+        // open socket for communication with cluster leader
+        int leader_socket = socket(AF_INET, SOCK_STREAM, 0);
+        if (leader_socket < 0) {
+            cout << "ERROR (" << errno << "): can't create socket\n";
+            exit(EXIT_FAILURE);
+        }
+
+        // struct containing address of cluster leader
+        sockaddr_in leader_addr;
+        leader_addr.sin_family = AF_INET;
+        leader_addr.sin_port = htons(LEADER_PORT);
+
+        // convert IPv4 address of leader
+        // from text to binary form
+        r = inet_pton(AF_INET, &LEADER_IP[0], &leader_addr.sin_addr);
+        if (r <= 0) {
+            cout << "ERROR (" << r << "): invalid address\n";
+            exit(EXIT_FAILURE);
+        } 
+
+        // connect to cluster leader
+        r = connect(leader_socket, (sockaddr*)&leader_addr, sizeof(leader_addr));
+        if (r < 0) {
+            cout << "ERROR (" << strerror(errno) << "): can't connect\n";
+        }
+        cout << "Connection with cluster leader sucessful!\n";
+
+        // main calculation of modularity
+        ModulWorker worker(NODES_PATH, EDGES_PATH);
+
+        vector<int> comm(worker.graph.num_nodes + 1);
+        int start_node, end_node;
+        double q;
+        while(1) {
+            // read interval from cluster leader
+            r = read(leader_socket, &start_node, sizeof(start_node));
+            if (r < 0) {
+                cout << "ERROR (" << errno << "): failed reading starting node\n";
+                exit(EXIT_FAILURE);
+            }
+
+            // signal from leader to stop calculating
+            if (start_node == -1) break;
+
+            r = read(leader_socket, &end_node, sizeof(end_node));
+            if (r < 0) {
+                cout << "ERROR (" << errno << "): failed reading ending node\n";
+                exit(EXIT_FAILURE);
+            }
+
+            // read communities from cluster leader
+            r = read(leader_socket, comm.data(), comm.size() * sizeof(comm[0]));
+            if (r < 0) {
+                cout << "ERROR (" << errno << "): failed reading communities from leader\n";
+                exit(EXIT_FAILURE);
+            }
+
+            // calculate modularity
+            q = worker.calculate_modularity(start_node, end_node, comm);
+
+            r = write(leader_socket, &q, sizeof(q));
+            if (r < 0) {
+                cout << "ERROR (" << errno << "): failed writing result to leader\n";
+                exit(EXIT_FAILURE);
+            }
+        }
     }
     else {
         cout << "ERROR: worker isn't assigned to any cluster!\n";
