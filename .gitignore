@@ -2,8 +2,6 @@
 config/apache-zookeeper-3.9.0/
 dataset/.idea/
 dataset/__pycache__
-dataset/nodes
-dataset/edges
 dataset/test_nodes
 dataset/test_edges
 system/.vscode

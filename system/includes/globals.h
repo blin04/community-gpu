@@ -13,5 +13,5 @@ int EB_CNT = 4;
 std::string EB_NODES[] = {"node2", "node4", "node5", "node6"};
 
 // size of mod cluster and nodes assigned to that cluster (first node specified becomes cluster leader)
-int MOD_CNT = 4;
-std::string MOD_NODES[] = {"node3", "node7", "node8", "node9"};
+int MOD_CNT = 3;
+std::string MOD_NODES[] = {"node3", "node7", "node8"};
