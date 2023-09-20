@@ -10,9 +10,9 @@
 # IPv4 and IPv6 localhost aliases
 127.0.0.1	localhost
 ::1			localhost
-10.156.0.3	node1
-10.156.0.5	node2
-10.156.0.7	node3
+10.172.0.2	node1
+10.172.0.3	node2
+10.172.0.4	node3
 
 #
 # Imaginary network.
