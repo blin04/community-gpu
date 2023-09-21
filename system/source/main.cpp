@@ -1,8 +1,9 @@
-#include <stdio.h>
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <chrono>
 
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
@@ -87,7 +88,7 @@ void setClustersIP(zhandle_t *zh) {
         r = zoo_get(zh, "/eb", 0, node_msg, &len, NULL);
         if (r != ZOK) { 
             cout << "ERROR (" << r << "): can't get value from /eb \n";
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         eb_state = node_msg;
 
@@ -95,7 +96,7 @@ void setClustersIP(zhandle_t *zh) {
         r = zoo_get(zh, "/mod", 0, node_msg, &len, NULL);
         if (r != ZOK) { 
             cout << "ERROR (" << r << "): can't get value from /eb \n";
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         mod_state = node_msg;
 
@@ -189,7 +190,7 @@ void createCluster(zhandle_t* zh, string cluster_name) {
 
 int main() 
 {
-    zoo_set_debug_level(ZOO_LOG_LEVEL_DEBUG);
+    //zoo_set_debug_level(ZOO_LOG_LEVEL_DEBUG);
 
     // initiating zookeeper connection
     zhandle_t *zkHandler = zookeeper_init("localhost:2181", NULL, 1000, 0, 0, 0);
@@ -283,6 +284,8 @@ int main()
         // file used for logging intermediate results of algorithm
         ofstream log("/project/results.log");         
 
+        auto start_time = chrono::high_resolution_clock::now();
+
         while(!leader.check_if_finished(zkHandler)) {
 
             // establish connection with /eb and /mod clusters
@@ -371,12 +374,18 @@ int main()
         vector<int> communities(leader.graph.num_nodes + 1);
         leader.graph.get_communities(communities);
 
+        auto end_time = chrono::high_resolution_clock::now();
+        chrono::duration<double> duration = end_time - start_time;
+
         // print out result of the algorithm 
         cout << "----- ASSIGNED COMMUNITIES -----\n";
         for (auto c : communities) {
             cout << c << " ";
         }
         cout << "\n";
+
+        cout << "Algorithm took " << duration.count() << " seconds to execute\n";
+        log << "Time: " << duration.count() << "\n";
 
         close(server_socket);
         close(eb_socket);

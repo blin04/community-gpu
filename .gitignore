@@ -5,7 +5,6 @@ dataset/__pycache__
 dataset/test_nodes
 dataset/test_edges
 system/.vscode
-system/bin
 system/results.log
 zklibs/
 
