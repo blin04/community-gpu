@@ -1,13 +1,13 @@
 .vscode/
 config/apache-zookeeper-3.9.0/
-dataset/.idea/
-dataset/__pycache__
-dataset/test_nodes
-dataset/test_edges
+dataset/*
 system/.vscode
 system/bin
 system/results.log
 zklibs/
 
 !workers/client.c
+!dataset/*.py
+!dataset/nodes
+!dataset/edges
 
