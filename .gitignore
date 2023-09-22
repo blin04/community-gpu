@@ -3,7 +3,7 @@ config/apache-zookeeper-3.9.0/
 dataset/*
 system/.vscode
 system/bin
-system/results.log
+system/info.log
 zklibs/
 
 !workers/client.c

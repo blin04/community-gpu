@@ -282,7 +282,8 @@ int main()
         int max_sd = server_socket;
 
         // file used for logging intermediate results of algorithm
-        ofstream log("/project/results.log");         
+        ofstream log("/project/info.log");         
+        ofstream output("/project/output");         
 
         auto start_time = chrono::high_resolution_clock::now();
 
@@ -377,12 +378,10 @@ int main()
         auto end_time = chrono::high_resolution_clock::now();
         chrono::duration<double> duration = end_time - start_time;
 
-        // print out result of the algorithm 
-        cout << "----- ASSIGNED COMMUNITIES -----\n";
-        for (auto c : communities) {
-            cout << c << " ";
+        //write result to output file
+        for (int i = 1; i <= leader.graph.num_nodes; i++) {
+            output << i << " " << communities[i] << "\n";
         }
-        cout << "\n";
 
         cout << "Algorithm took " << duration.count() << " seconds to execute\n";
         log << "Time: " << duration.count() << "\n";
