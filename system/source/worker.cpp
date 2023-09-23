@@ -77,7 +77,7 @@ bool checkCluster(zhandle_t* zh, string path) {
 
 int main()
 {
-    zoo_set_debug_level(ZOO_LOG_LEVEL_DEBUG);
+    //zoo_set_debug_level(ZOO_LOG_LEVEL_DEBUG);
 
     // initiating zookeeper connection
     zhandle_t *zkHandler = zookeeper_init("localhost:2181", NULL, 1000, 0, 0, 0);
@@ -245,6 +245,8 @@ int main()
 
             // calculate modularity
             q = worker.calculate_modularity(start_node, end_node, comm);
+
+            cout << "Calculated for " << start_node << " " << end_node << "\n";
 
             r = write(leader_socket, &q, sizeof(q));
             if (r < 0) {

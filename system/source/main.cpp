@@ -282,9 +282,9 @@ int main()
         int max_sd = server_socket;
 
         // file used for logging intermediate results of algorithm
-        ofstream log("/project/info.log");         
-        ofstream output("/project/output");         
-        ofstream found_communities("/project/communities");         
+        ofstream log("/project/outputs/info.log");         
+        ofstream output("/project/outputs/output");         
+        ofstream found_communities("/project/outputs/communities");         
 
         auto start_time = chrono::high_resolution_clock::now();
 
@@ -348,6 +348,7 @@ int main()
             leader.modularity_values.push_back(mod);
 
             // log intermediate results
+            cout << "--- ITERATION " << iteration << " ---\n";
             log << "--- ITERATION " << iteration << " ---\n";
             log << "Edge deleted: " << most_central_edge << "\n";
             log << "Modularity: " << mod << "\n";

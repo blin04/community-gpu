@@ -65,11 +65,11 @@ for i in range(len(community_sizes)):
         
         if i == j: 
             # same community
-            probs[i][j] = random.uniform(0.2, 0.5)
+            probs[i][j] = 0.1
 
         elif i != j:
             # different communities
-            probs[i][j] = random.uniform(0, 0.05)
+            probs[i][j] = 0.01
             probs[j][i] = probs[i][j]
 
 # generate graph
