@@ -16,7 +16,7 @@ class Graph {
         int num_nodes;
         int num_edges;
         int orig_num_edges;
-        map<int, string> node_labels;
+        map<int, int> node_labels;
         map<pair<int, int>, int> edge_ids;
         vector<vector<int>> adj_list;
 

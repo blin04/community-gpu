@@ -1,9 +1,10 @@
 .vscode/
 config/apache-zookeeper-3.9.0/
 dataset/*
+results/
 system/.vscode
 system/bin
-system/info.log
+system/outputs
 zklibs/
 
 !workers/client.c

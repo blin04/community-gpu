@@ -16,7 +16,7 @@ Graph::Graph(string nodes_file, string edges_file) {
     // so that 1-indexing can be used
     adj_list.push_back(vector<int>());
 
-    int node_id; string node_label;
+    int node_id; int node_label;
     while(nodes_input >> node_id >> node_label) {
         ++num_nodes;
         node_labels[node_id] = node_label;

@@ -284,6 +284,7 @@ int main()
         // file used for logging intermediate results of algorithm
         ofstream log("/project/info.log");         
         ofstream output("/project/output");         
+        ofstream found_communities("/project/communities");         
 
         auto start_time = chrono::high_resolution_clock::now();
 
@@ -366,25 +367,32 @@ int main()
             }
         }
 
-        // remove all edges until partition with
+        // remove all edges until graph with
         // highest modularity is reached
         for (int i = 0; i < best_it; i++) {
             leader.graph.remove_edge(leader.removal_order[i].second);
         }
 
+        // get communities of graph with highest modularity
         vector<int> communities(leader.graph.num_nodes + 1);
         leader.graph.get_communities(communities);
 
+        // write running time of algorithm into a file
         auto end_time = chrono::high_resolution_clock::now();
         chrono::duration<double> duration = end_time - start_time;
+        output << duration.count() << "\n";
 
-        //write result to output file
+        // write found communities into a file and calculate accuracy
+        int classified_correctly = 0;
         for (int i = 1; i <= leader.graph.num_nodes; i++) {
-            output << i << " " << communities[i] << "\n";
+            found_communities << i << " " << communities[i] << "\n";
+            if (communities[i] == leader.graph.node_labels[i]) ++classified_correctly;
         }
 
+        // calculate fraction of vertices classified correctly
+        output << ((double)classified_correctly) / ((double)leader.graph.num_nodes) << "\n"; 
+
         cout << "Algorithm took " << duration.count() << " seconds to execute\n";
-        log << "Time: " << duration.count() << "\n";
 
         close(server_socket);
         close(eb_socket);
@@ -563,7 +571,6 @@ int main()
                 exit(EXIT_FAILURE);
             }
 
-            cout << "About to begin!\n";
             while(graph.num_edges) {
                 if (workers_finished) {
                     // start workers
