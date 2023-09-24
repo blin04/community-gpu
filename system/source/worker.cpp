@@ -141,7 +141,6 @@ int main()
         vector<double> betweenness(worker.graph.orig_num_edges + 1, 0);
         while(worker.graph.num_edges) {
             // read interval from cluster leader
-            cout << "waiting to read...";
             r = read(leader_socket, &start_node, sizeof(start_node));
             if (r < 0) {
                 cout << "ERROR (" << errno << "): failed reading starting node\n";

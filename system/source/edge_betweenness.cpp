@@ -27,9 +27,10 @@ vector<double> EdgeWorker::calculate_edge_betweenness(int start_node, int end_no
         distance[node] = 0;
         weight[node] = 1;
 
-        queue<int> q;
+        queue<int> q, lq;
         q.push(node);
         int curr;
+        bool leaf;
         while(!q.empty()) {
             curr = q.front();
             q.pop();
@@ -37,7 +38,10 @@ vector<double> EdgeWorker::calculate_edge_betweenness(int start_node, int end_no
             if (visited[curr]) continue;
             visited[curr] = true;
 
+            leaf = true;
             for (int next : graph.adj_list[curr]) {
+                if (!visited[next]) leaf = false;
+
                 if (distance[next] == -1) {
                     // distance value not set
                     distance[next] = distance[curr] + 1;
@@ -50,28 +54,18 @@ vector<double> EdgeWorker::calculate_edge_betweenness(int start_node, int end_no
 
                 q.push(next);
             }
+
+            if (leaf) lq.push(curr);
         }
 
         // vector for storing values of betweenness for each edge
         fill(betweenness.begin(), betweenness.end(), 0.0);
 
-        // find leaf nodes
-        bool leaf;
-        for (int leaf_node = 1; leaf_node <= graph.num_nodes; leaf_node++) {
-            if (distance[leaf_node] == -1) continue;
-
-            leaf = true;
-            for (int x : graph.adj_list[leaf_node]) {
-                if (distance[x] > distance[leaf_node]) leaf = false;
-            }
-            if (leaf) q.push(leaf_node);
-        } 
-
         // find betweenness values
         fill(visited.begin(), visited.end(), false);
-        while(!q.empty()) {
-            curr = q.front();
-            q.pop();
+        while(!lq.empty()) {
+            curr = lq.front();
+            lq.pop();
 
             if (visited[curr]) continue;
             visited[curr] = true;
