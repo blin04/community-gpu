@@ -286,7 +286,8 @@ int main()
         ofstream output("/project/outputs/output");         
         ofstream found_communities("/project/outputs/communities");         
 
-        auto start_time = chrono::high_resolution_clock::now();
+        bool set_time = false;
+        chrono::high_resolution_clock::time_point start_time;
 
         while(!leader.check_if_finished(zkHandler)) {
 
@@ -333,6 +334,12 @@ int main()
             /*
             * here begins main leader loop
             */ 
+
+            // start tracking time 
+            if (STATE == CONNECTED && !set_time) {
+                start_time = chrono::high_resolution_clock::now();
+                set_time = true;
+            }
 
             // get id of an edge that has highest value of centrality
             most_central_edge = leader.find_central_edge(eb_socket);
@@ -572,6 +579,7 @@ int main()
                 exit(EXIT_FAILURE);
             }
 
+            int edge_to_delete = 0;
             while(graph.num_edges) {
                 if (workers_finished) {
                     // start workers
@@ -614,21 +622,26 @@ int main()
                     // read results from workers
                     fill(betweenness.begin(), betweenness.end(), 0);
                     for (int i = 0; i < EB_CNT - 1; i++) {
-                        r = read(workers[i], input_betweenness.data(), 
-                            input_betweenness.size() * sizeof(input_betweenness[0]));
-                        if (r < 0) {
-                            cout << "ERROR (" << errno << "): failed reading from worker!\n";
-                            exit(EXIT_FAILURE);
+
+                        fill(input_betweenness.begin(), input_betweenness.end(), 0);
+                        
+                        // read vector
+                        for (int j = 1; j <= graph.orig_num_edges; j++) {
+                            r = read(workers[i], &input_betweenness[j], sizeof(input_betweenness[j]));
+                        
+                            if (r < 0) {
+                                cout << "ERROR (" << errno << "): failed reading from worker!\n";
+                                exit(EXIT_FAILURE);
+                            }
                         }
 
-                        for (int i = 1; i <= graph.orig_num_edges; i++) {
-                            betweenness[i] += input_betweenness[i];    
+                        for (int j = 1; j <= graph.orig_num_edges; j++) {
+                            betweenness[j] += input_betweenness[j];    
                         }
                     }
 
                     // find edge with highest centrality value
                     // and remove it
-                    int edge_to_delete;
                     double highest_betweenness = -1;
                     for (int i = 1; i <= graph.orig_num_edges; i++) {
                         if (betweenness[i] > highest_betweenness) {

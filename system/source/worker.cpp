@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <string>
 
 #include <string.h>
@@ -136,10 +137,11 @@ int main()
         // calculate edge betweenness
         EdgeWorker worker(NODES_PATH, EDGES_PATH);
 
-        int start_node, end_node, edge_to_delete;
-        vector<double> betweenness(worker.graph.orig_num_edges + 1);
+        int start_node, end_node, edge_to_delete = 1;
+        vector<double> betweenness(worker.graph.orig_num_edges + 1, 0);
         while(worker.graph.num_edges) {
             // read interval from cluster leader
+            cout << "waiting to read...";
             r = read(leader_socket, &start_node, sizeof(start_node));
             if (r < 0) {
                 cout << "ERROR (" << errno << "): failed reading starting node\n";
@@ -155,11 +157,12 @@ int main()
             betweenness = worker.calculate_edge_betweenness(start_node, end_node);
 
             // send results to leader
-            r = write(leader_socket, betweenness.data(), 
-                betweenness.size() * sizeof(betweenness[0]));
-            if (r < 0) {
-                cout << "ERROR (" << errno << "): failed sending results to leader\n";
-                exit(EXIT_FAILURE);
+            for (int i = 1; i <= worker.graph.orig_num_edges; i++) {
+                r = write(leader_socket, &betweenness[i], sizeof(betweenness[i]));
+                if (r < 0) {
+                    cout << "ERROR (" << errno << "): failed sending results to leader\n";
+                    exit(EXIT_FAILURE);
+                }
             }
 
             // read edge that should be deleted
@@ -245,8 +248,6 @@ int main()
 
             // calculate modularity
             q = worker.calculate_modularity(start_node, end_node, comm);
-
-            cout << "Calculated for " << start_node << " " << end_node << "\n";
 
             r = write(leader_socket, &q, sizeof(q));
             if (r < 0) {
