@@ -83,7 +83,7 @@ vector<double> EdgeWorker::calculate_edge_betweenness(int start_node, int end_no
             for (int neighbour : graph.adj_list[curr]) {
                 if (!visited[neighbour] && distance[neighbour] == distance[curr] - 1) {
                     betweenness[graph.get_edge_id(curr, neighbour)] = (weight[neighbour] / weight[curr]) * sum;
-                    q.push(neighbour);
+                    lq.push(neighbour);
                 }
             }
         }
