@@ -343,7 +343,6 @@ int main()
 
             // get id of an edge that has highest value of centrality
             most_central_edge = leader.find_central_edge(eb_socket);
-            // if (most_central_edge == -1) break;
 
             // update removal order 
             leader.removal_order.push_back({iteration, most_central_edge});
@@ -351,7 +350,6 @@ int main()
 
             // calculate value of modularity for current partition
             mod = leader.calculate_modularity(mod_socket);
-            // if (mod == -1) break;
             leader.modularity_values.push_back(mod);
 
             // log intermediate results

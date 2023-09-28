@@ -61,52 +61,5 @@ services:
     environment:
       ZOO_MY_ID: 5
 
-  node6:
-    hostname: node6
-    networks:
-      - net_blin
-    volumes:
-      - ~/Documents/Petnica/Project2023/Code/system:/project
-      - ~/Documents/Petnica/Project2023/Code/config/zoo.cfg:/conf/zoo.cfg 
-      - ~/Documents/Petnica/Project2023/Code/dataset:/graph
-    image: zklibs
-    environment:
-      ZOO_MY_ID: 6
-
-  node7:
-    hostname: node7
-    networks:
-      - net_blin
-    volumes:
-      - ~/Documents/Petnica/Project2023/Code/system:/project
-      - ~/Documents/Petnica/Project2023/Code/config/zoo.cfg:/conf/zoo.cfg 
-      - ~/Documents/Petnica/Project2023/Code/dataset:/graph
-    image: zklibs
-    environment:
-      ZOO_MY_ID: 7
-
-  node8:
-    hostname: node8
-    networks:
-      - net_blin
-    volumes:
-      - ~/Documents/Petnica/Project2023/Code/system:/project
-      - ~/Documents/Petnica/Project2023/Code/config/zoo.cfg:/conf/zoo.cfg 
-      - ~/Documents/Petnica/Project2023/Code/dataset:/graph
-    image: zklibs
-    environment:
-      ZOO_MY_ID: 8
-
-  node9:
-    hostname: node9
-    networks:
-      - net_blin
-    volumes:
-      - ~/Documents/Petnica/Project2023/Code/system:/project
-      - ~/Documents/Petnica/Project2023/Code/config/zoo.cfg:/conf/zoo.cfg 
-      - ~/Documents/Petnica/Project2023/Code/dataset:/graph
-    image: zklibs
-    environment:
-      ZOO_MY_ID: 9
 networks:
   net_blin:

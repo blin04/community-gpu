@@ -1,5 +1,6 @@
 #include <queue>
 #include <iostream>
+#include <algorithm>
 
 #include "../includes/edge_betweenness.h"
 
@@ -27,10 +28,11 @@ vector<double> EdgeWorker::calculate_edge_betweenness(int start_node, int end_no
         distance[node] = 0;
         weight[node] = 1;
 
-        queue<int> q, lq;
+        queue<int> q;
         q.push(node);
         int curr;
         bool leaf;
+        vector<int> leaves;
         while(!q.empty()) {
             curr = q.front();
             q.pop();
@@ -40,22 +42,29 @@ vector<double> EdgeWorker::calculate_edge_betweenness(int start_node, int end_no
 
             leaf = true;
             for (int next : graph.adj_list[curr]) {
-                if (!visited[next]) leaf = false;
-
                 if (distance[next] == -1) {
                     // distance value not set
                     distance[next] = distance[curr] + 1;
                     weight[next] = weight[curr];
+                    leaf = false;
                 }
                 else if (distance[next] == distance[curr] + 1) {
                     // dj = di + 1;
                     weight[next] += weight[curr];
+                    leaf = false;
                 }
 
                 q.push(next);
             }
 
-            if (leaf) lq.push(curr);
+            if (leaf) leaves.push_back(curr);
+        }
+
+        // sorting leaves in ascending order
+        // (for some reason, algorithm doesn't work if this isn't done)
+        sort(leaves.begin(), leaves.end());
+        for(int l : leaves) {
+            q.push(l);
         }
 
         // vector for storing values of betweenness for each edge
@@ -63,9 +72,9 @@ vector<double> EdgeWorker::calculate_edge_betweenness(int start_node, int end_no
 
         // find betweenness values
         fill(visited.begin(), visited.end(), false);
-        while(!lq.empty()) {
-            curr = lq.front();
-            lq.pop();
+        while(!q.empty()) {
+            curr = q.front();
+            q.pop();
 
             if (visited[curr]) continue;
             visited[curr] = true;
@@ -83,16 +92,10 @@ vector<double> EdgeWorker::calculate_edge_betweenness(int start_node, int end_no
             for (int neighbour : graph.adj_list[curr]) {
                 if (!visited[neighbour] && distance[neighbour] == distance[curr] - 1) {
                     betweenness[graph.get_edge_id(curr, neighbour)] = (weight[neighbour] / weight[curr]) * sum;
-                    lq.push(neighbour);
+                    q.push(neighbour);
                 }
             }
         }
-
-        /* std::cout << "-- BETWEENNESS SCORE --\n";
-        for (double x : betweenness) std::cout << x << " ";
-        std::cout << "\n"; */
-        
-
 
         // add betweenness scores to total betweenness values
         for (int i = 1; i <= graph.orig_num_edges; i++) total_betweenness[i] += betweenness[i];
