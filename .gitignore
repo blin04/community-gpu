@@ -11,6 +11,6 @@ zklibs/
 !dataset/*.py
 !dataset/nodes
 !dataset/edges
-!dataset/zachary_nodes
-!dataset/zachary_edges
+!dataset/test_nodes
+!dataset/test_edges
 

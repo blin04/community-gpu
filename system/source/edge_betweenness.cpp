@@ -1,6 +1,7 @@
 #include <queue>
 #include <iostream>
 #include <algorithm>
+#include <list>
 
 #include "../includes/edge_betweenness.h"
 
@@ -32,7 +33,7 @@ vector<double> EdgeWorker::calculate_edge_betweenness(int start_node, int end_no
         q.push(node);
         int curr;
         bool leaf;
-        vector<int> leaves;
+        list<int> leaves;
         while(!q.empty()) {
             curr = q.front();
             q.pop();
@@ -57,24 +58,35 @@ vector<double> EdgeWorker::calculate_edge_betweenness(int start_node, int end_no
                 q.push(next);
             }
 
-            if (leaf) leaves.push_back(curr);
+            if (leaf) {
+                // inserting leaf to list in ascending order
+                bool inserted = false;
+                for (auto it = leaves.begin(); it != leaves.end(); it++) {
+                    if (curr < *it) {
+                        leaves.emplace(it, curr);
+                        inserted = true;
+                        break;
+                    }
+                }
+                if (!inserted) leaves.push_back(curr);
+            }
         }
 
         // sorting leaves in ascending order
         // (for some reason, algorithm doesn't work if this isn't done)
-        sort(leaves.begin(), leaves.end());
+        /*sort(leaves.begin(), leaves.end());
         for(int l : leaves) {
             q.push(l);
-        }
+        }*/
 
         // vector for storing values of betweenness for each edge
         fill(betweenness.begin(), betweenness.end(), 0.0);
 
         // find betweenness values
         fill(visited.begin(), visited.end(), false);
-        while(!q.empty()) {
-            curr = q.front();
-            q.pop();
+        while(!leaves.empty()) {
+            curr = leaves.front();
+            leaves.pop_front();
 
             if (visited[curr]) continue;
             visited[curr] = true;
@@ -92,7 +104,7 @@ vector<double> EdgeWorker::calculate_edge_betweenness(int start_node, int end_no
             for (int neighbour : graph.adj_list[curr]) {
                 if (!visited[neighbour] && distance[neighbour] == distance[curr] - 1) {
                     betweenness[graph.get_edge_id(curr, neighbour)] = (weight[neighbour] / weight[curr]) * sum;
-                    q.push(neighbour);
+                    leaves.push_back(neighbour);
                 }
             }
         }
