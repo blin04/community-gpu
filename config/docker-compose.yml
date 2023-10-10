@@ -85,5 +85,77 @@ services:
     environment:
       ZOO_MY_ID: 7
 
+  node8:
+    hostname: node8
+    networks:
+      - net_blin
+    volumes:
+      - ~/Documents/Petnica/Project2023/Code/system:/project
+      - ~/Documents/Petnica/Project2023/Code/config/zoo.cfg:/conf/zoo.cfg 
+      - ~/Documents/Petnica/Project2023/Code/dataset:/graph
+    image: zklibs
+    environment:
+      ZOO_MY_ID: 8
+
+  node9:
+    hostname: node9
+    networks:
+      - net_blin
+    volumes:
+      - ~/Documents/Petnica/Project2023/Code/system:/project
+      - ~/Documents/Petnica/Project2023/Code/config/zoo.cfg:/conf/zoo.cfg 
+      - ~/Documents/Petnica/Project2023/Code/dataset:/graph
+    image: zklibs
+    environment:
+      ZOO_MY_ID: 9
+
+  node10:
+    hostname: node10
+    networks:
+      - net_blin
+    volumes:
+      - ~/Documents/Petnica/Project2023/Code/system:/project
+      - ~/Documents/Petnica/Project2023/Code/config/zoo.cfg:/conf/zoo.cfg 
+      - ~/Documents/Petnica/Project2023/Code/dataset:/graph
+    image: zklibs
+    environment:
+      ZOO_MY_ID: 10
+
+  node11:
+    hostname: node11
+    networks:
+      - net_blin
+    volumes:
+      - ~/Documents/Petnica/Project2023/Code/system:/project
+      - ~/Documents/Petnica/Project2023/Code/config/zoo.cfg:/conf/zoo.cfg 
+      - ~/Documents/Petnica/Project2023/Code/dataset:/graph
+    image: zklibs
+    environment:
+      ZOO_MY_ID: 11
+
+  node12:
+    hostname: node12
+    networks:
+      - net_blin
+    volumes:
+      - ~/Documents/Petnica/Project2023/Code/system:/project
+      - ~/Documents/Petnica/Project2023/Code/config/zoo.cfg:/conf/zoo.cfg 
+      - ~/Documents/Petnica/Project2023/Code/dataset:/graph
+    image: zklibs
+    environment:
+      ZOO_MY_ID: 12
+
+  node13:
+    hostname: node13
+    networks:
+      - net_blin
+    volumes:
+      - ~/Documents/Petnica/Project2023/Code/system:/project
+      - ~/Documents/Petnica/Project2023/Code/config/zoo.cfg:/conf/zoo.cfg 
+      - ~/Documents/Petnica/Project2023/Code/dataset:/graph
+    image: zklibs
+    environment:
+      ZOO_MY_ID: 13
+
 networks:
   net_blin:
