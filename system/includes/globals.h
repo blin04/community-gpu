@@ -9,9 +9,9 @@ std::string NODES_PATH = "/graph/nodes";       // path to file containing nodes
 std::string EDGES_PATH = "/graph/edges";       // path to file containing edges
 
 // size of eb cluster and nodes assigned to that cluster (first node specified becomes cluster leader)
-int EB_CNT = 3;
-std::string EB_NODES[] = {"node2", "node4", "node6"};
+int EB_CNT = 6;
+std::string EB_NODES[] = {"node2", "node4", "node6", "node8", "node10", "node12"};
 
 // size of mod cluster and nodes assigned to that cluster (first node specified becomes cluster leader)
-int MOD_CNT = 3;
-std::string MOD_NODES[] = {"node3", "node5", "node7"};
+int MOD_CNT = 6;
+std::string MOD_NODES[] = {"node3", "node5", "node7", "node9", "node11", "node13"};
