@@ -7,5 +7,5 @@ This paper presents a distributed version of the Girvan-Newman algorithm for com
 
 The system was tested on Google Cloud virutal machines. For coordination of the system ZooKeeper library was used. All important code is located on `master` branch. Branches `cluster2` and `cluster5` were used only for easier setup of virtual machines on the cloud.
 
-[System diagram](distsys-eng.png)
+![System diagram](distsys-eng.png)
 Schematic of the system
